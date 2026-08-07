@@ -1,83 +1,62 @@
-# 🐞 Solana Debugger
+# Solana debuger
 
-An interactive, rust-based Solana transaction re-execution and debugging tool. This tool enables you to send transactions to a Solana cluster (Localnet/Devnet/Mainnet) and **re-execute (replay/simulate)** them locally or via RPC simulation engines to capture execution logs, compute units, account balance deltas, and program errors.
+## setup solana (LINUX)
+1) `
+curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash`
 
-> 📖 **Team Documentation**: For a deep dive into the architecture, execution flow diagram, and VM simulation report, see [`EXPLANATION.md`](file:///home/vedran/dev/solana-debugger/EXPLANATION.md).
+restart terminal
 
----
+2) optional: `nvm use --delete-prefix v24.10.0`
 
-## ⚙️ Prerequisites & Setup (Linux)
+3) export path: `echo 'export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"' >> ~/.zshrc`
 
-### 1. Install Rust
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-```
+4) `solana-test-validator`
 
-### 2. Install Solana CLI Tool Suite (Agave)
-```bash
-curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
-```
-Add Solana to your PATH (e.g. in `~/.bashrc` or `~/.zshrc`):
-```bash
-export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
-```
+ovo ranuje na http://127.0.0.1:8899, **ostaviti terminal upaljen**
 
-### 3. Start Local Solana Validator
-In a dedicated terminal window, run:
-```bash
-solana-test-validator
-```
-*Leave this validator terminal running in the background (default RPC: `http://127.0.0.1:8899`).*
+Otvori novi terminal
 
-### 4. Configure Solana CLI & Create Wallet
-In a new terminal:
-```bash
-# Set CLI target to local validator
-solana config set --url localhost
+5) `solana config set --url localhost`
 
-# Generate a local keypair (if not already created)
-solana-keygen new --outfile ~/.config/solana/id.json --no-bip39-passphrase --force
+6) `solana-keygen new --outfile ~/.config/solana/id.json`
 
-# Fund your keypair with 10 SOL
-solana airdrop 10
-```
+7) `solana airdrop 10`
 
----
 
-## 🚀 Running the Rust Solana Debugger (Step 1)
+## pravljenje projekta i transakcije
 
-### Build & Run
-```bash
-cargo run
-```
+1) `cd solana-tx`
 
-### 🧪 What Step 1 Does:
-1. **Connects** to the local Solana validator (`http://127.0.0.1:8899`).
-2. **Loads/Generates** local keypairs and checks SOL balance (requests automatic airdrop if needed).
-3. **Builds & Sends** a simple System Program SOL transfer transaction.
-4. **Confirms** transaction commitment on-chain.
-5. **Re-Executes (Replays/Simulates)** the exact same transaction using Solana's VM simulation engine (`simulate_transaction_with_config`).
-6. **Outputs** the Re-execution Report:
-   - ✅ / ❌ Transaction Execution Status
-   - ⚡ Compute Units (CU) Consumed
-   - 📜 VM Execution Trace / Program Logs (`meta.logMessages`)
-   - 💰 Pre- and Post- Account Balances
+2) `npm init -y`
 
----
+3) `npm install @solana/web3.js`
 
-## 🧠 How Transaction Re-Execution Works
+4) `node transfer.js`
 
-### Core Concepts:
-- **Deterministic Execution**: Solana transactions are deterministic given a set of input accounts and program code.
-- **RPC Simulation (`simulate_transaction`)**: The RPC node creates a temporary bank state, executes the transaction pipeline in Sealevel (Solana's parallel VM runtime), and records logs and account mutations **without altering the persistent chain state**.
-- **Debugger Advantage**: Re-execution allows us to replay both successful and **failed mainnet/devnet transactions** locally to inspect instruction traces, error codes, and account states.
 
----
+# jocko:
 
-## 🗺️ Project Roadmap
+## Phase 0 — Environment setup
+- [ ] Install Rust via `rustup` (needed for Solana program tooling either way)
+- [ ] Install the Solana CLI tool suite (Agave) — gives you `solana`, `solana-keygen`, `solana-test-validator`
+- [ ] Run `cargo-build-sbf` once to trigger the platform-tools download (needed even if you don't compile your own program)
+- [ ] Install Anchor via `avm install latest && avm use latest` — most real-world failed txs you'll debug are Anchor programs, so you need `anchor-cli` for IDL tooling
+- [ ] Install Surfpool: `cargo install surfpool-cli`
+- [ ] Get an RPC endpoint with decent rate limits (Helius or QuickNode free tier) — the public mainnet RPC will throttle you fast once you're pulling tx + account data repeatedly
+- [ ] Pick your client language (TS/web3.js or Rust) and scaffold a bare project that can hit that RPC
 
-- [x] **Phase 1 (Step 1) — Core Re-execution Loop**: Send a simple transaction and re-execute/replay it via Rust RPC simulation engine.
-- [ ] **Phase 1 (Step 2) — Mainnet Transaction Replay**: Fetch historical transactions by signature and simulate against custom/forked account state.
-- [ ] **Phase 2 — IDL & Error Decoding**: Map raw instruction data and custom hex error codes to human-readable Anchor/IDL errors.
-- [ ] **Phase 3 — Interactive Debugger CLI / UI**: Visual trace inspector showing per-instruction compute unit cost, account deltas, and failure stack traces.
+## Phase 1 — Prove the core loop works
+- [ ] Write a script that takes a tx signature and pulls it via `getParsedTransaction`, dumping `meta.logMessages` and the account keys involved
+- [ ] Start Surfpool locally (`NO_DNA=1 surfpool start`) and confirm you can connect to it like a normal RPC
+- [ ] Test Surfpool's mainnet-fork: pull a single known account/program into your local Surfnet and confirm the state matches mainnet
+- [ ] Find one real failed transaction on a program you know (a swap that hit slippage, a CU-limit failure, whatever) and manually replay it against the forked state — just get the same logs to reproduce locally
+
+## Phase 2 — Add the decoding layer
+- [ ] Fetch the IDL for the program involved (Anchor programs usually have it on-chain or in their repo)
+- [ ] Map the raw hex error code in the logs to the IDL's named error
+- [ ] Capture account state before and after replay, diff it
+
+## Phase 3 — Wrap it in something demoable
+- [ ] Decide CLI-first (faster to build) vs. minimal web UI (better demo)
+- [ ] Output format: signature in → root cause summary out (program, instruction, failed account/constraint, human-readable error)
+
