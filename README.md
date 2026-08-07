@@ -41,7 +41,7 @@ Otvori novi terminal
 - [ ] Install the Solana CLI tool suite (Agave) — gives you `solana`, `solana-keygen`, `solana-test-validator`
 - [ ] Run `cargo-build-sbf` once to trigger the platform-tools download (needed even if you don't compile your own program)
 - [ ] Install Anchor via `avm install latest && avm use latest` — most real-world failed txs you'll debug are Anchor programs, so you need `anchor-cli` for IDL tooling
-- [ ] Install Surfpool: `cargo install surfpool`
+- [ ] Install Surfpool: `cargo install surfpool-cli`
 - [ ] Get an RPC endpoint with decent rate limits (Helius or QuickNode free tier) — the public mainnet RPC will throttle you fast once you're pulling tx + account data repeatedly
 - [ ] Pick your client language (TS/web3.js or Rust) and scaffold a bare project that can hit that RPC
 
