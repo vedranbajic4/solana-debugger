@@ -106,3 +106,60 @@ impl DwarfLineMapper {
         self.pc_to_location.len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dwarf_mapper_insert_and_lookup() {
+        let mut mapper = DwarfLineMapper::new();
+
+        mapper.insert(
+            0,
+            SourceLocation {
+                file_path: "src/lib.rs".to_string(),
+                line: 10,
+                column: 1,
+            },
+        );
+
+        mapper.insert(
+            8,
+            SourceLocation {
+                file_path: "src/lib.rs".to_string(),
+                line: 15,
+                column: 4,
+            },
+        );
+
+        mapper.insert(
+            16,
+            SourceLocation {
+                file_path: "src/state.rs".to_string(),
+                line: 42,
+                column: 12,
+            },
+        );
+
+        assert_eq!(mapper.mappings_count(), 3);
+
+        // Exact match
+        let loc0 = mapper.lookup_pc(0).unwrap();
+        assert_eq!(loc0.file_path, "src/lib.rs");
+        assert_eq!(loc0.line, 10);
+
+        let loc8 = mapper.lookup_pc(8).unwrap();
+        assert_eq!(loc8.file_path, "src/lib.rs");
+        assert_eq!(loc8.line, 15);
+
+        // Intermediate PC offset should map to nearest preceding PC
+        let loc12 = mapper.lookup_pc(12).unwrap();
+        assert_eq!(loc12.file_path, "src/lib.rs");
+        assert_eq!(loc12.line, 15);
+
+        let loc16 = mapper.lookup_pc(16).unwrap();
+        assert_eq!(loc16.file_path, "src/state.rs");
+        assert_eq!(loc16.line, 42);
+    }
+}
