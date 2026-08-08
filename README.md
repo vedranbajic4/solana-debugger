@@ -58,3 +58,22 @@ cargo run --bin sbf_tracer -- 3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQF
   3. Disassembles opcode bytes into SBF machine code instructions.
   4. Maps Program Counter (PC) offsets to source line numbers via DWARF debug tables.
   5. Saves output to `bytecode.txt`.
+
+
+### 3) Run Frontend UI Application
+
+Open **two terminal windows**:
+
+Terminal 1 (Backend Server):
+```bash
+cd ui
+npm run server
+```
+
+Terminal 2 (Frontend App):
+```bash
+cd ui
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.

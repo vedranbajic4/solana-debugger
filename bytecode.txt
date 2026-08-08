@@ -1,119 +1,124 @@
 ==================================================================================================
 SOLANA TRANSACTION LOW-LEVEL SBF BYTECODE & DWARF SOURCE TRACE
 ==================================================================================================
-Transaction Signature: 31ddNr6y7usRNBSjbmZ9uKJKSjQMWaMiFNmphbUVjPpZRmSb15b1UznUe5kmf9HGzu1sDLbwkL36mn4gKsPH5YbS
-Slot:                  437887834
+Transaction Signature: 3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQFnTnHnjmazFEgf65ZnJpZQvFLhDe9m38AA7D45D
+Slot:                  437888086
 Execution Status:      SUCCESS ✅
-Compute Units Consumed: 137915 CU
+Compute Units Consumed: 88274 CU
 
 --- 📜 VM EXECUTION LOGS ---
-[01] Program 11111111111111111111111111111111 invoke [1]
-[02] Program 11111111111111111111111111111111 success
+[01] Program ComputeBudget111111111111111111111111111111 invoke [1]
+[02] Program ComputeBudget111111111111111111111111111111 success
 [03] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]
 [04] Program log: CreateIdempotent
-[05] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 5937 of 1399850 compute units
-[06] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success
-[07] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]
-[08] Program log: CreateIdempotent
-[09] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[10] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 179 of 1388562 compute units
-[11] Program return: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA pQAAAAAAAAA=
-[12] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[13] Program 11111111111111111111111111111111 invoke [2]
-[14] Program 11111111111111111111111111111111 success
-[15] Program log: Initialize the associated token account
-[16] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[17] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 37 of 1383473 compute units
-[18] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[19] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[20] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 229 of 1381012 compute units
-[21] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[22] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 13413 of 1393913 compute units
-[23] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success
-[24] Program 11111111111111111111111111111111 invoke [1]
-[25] Program 11111111111111111111111111111111 success
-[26] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]
-[27] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 201 of 1380350 compute units
-[28] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[29] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]
-[30] Program log: CreateIdempotent
-[31] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[32] Program log: Instruction: GetAccountDataSize
-[33] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 1523 of 1370385 compute units
-[34] Program return: TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb qgAAAAAAAAA=
-[35] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[36] Program 11111111111111111111111111111111 invoke [2]
-[37] Program 11111111111111111111111111111111 success
-[38] Program log: Initialize the associated token account
-[39] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[40] Program log: Instruction: InitializeImmutableOwner
-[41] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 736 of 1364040 compute units
-[42] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[43] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[44] Program log: Instruction: InitializeAccount3
-[45] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2153 of 1360969 compute units
-[46] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[47] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 21616 of 1380149 compute units
-[48] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success
-[49] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [1]
-[50] Program log: Instruction: Buy
-[51] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ invoke [2]
-[52] Program log: Instruction: GetFees
-[53] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ consumed 6010 of 1319964 compute units
-[54] Program return: pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ FAAAAAAAAAAFAAAAAAAAAFoAAAAAAAAA
-[55] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ success
-[56] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[57] Program log: Instruction: TransferChecked
-[58] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2562 of 1310125 compute units
-[59] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[60] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[61] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 1305060 compute units
-[62] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[63] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[64] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 1302188 compute units
-[65] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[66] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[67] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 1296461 compute units
-[68] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[69] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[70] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 1290380 compute units
-[71] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[72] Program data: Z/RSHyz1d3fYc3ZqAAAAAATd2nYAAAAAeilHAAAAAAAAAAAAAAAAAHopRwAAAAAA7IR7u7xfAAAJEhQ3LQAAAJ83PQAAAAAAFAAAAAAAAABYHwAAAAAAAAUAAAAAAAAA1gcAAAAAAAD3Vj0AAAAAANnrPQAAAAAASuGfEU/1JTrnNwu1opXtMVBA71uQoSlCcsyy+4csiLDmreu8TwqKzk+l9S16R4kyRUgEkmX4dQPsTTZkQFuM/AGXFbk6JnSP+l7Dk/Nmp71wopmfVOL2kq/6RjI+2VqIKm8QN/XgNNctPEkQO96BAY+C0D8TpFOHxWCUbOOf1QbXqo+wYNgpG0xNR12v92LJa9wNrOs2wBLq0S7TqUhBYQHIIfOo8I/viNwxQkp2gK6MloFwTPHl9ciOJ5m3+YIhnMlMztmYcdHKlxvo+BBDvAF03v5lN5TIiDXdjyxbDZpaAAAAAAAAAAyNAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABN3adgAAAAADAAAAYnV5AAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAA6wMAAAAAAABoQh4YBAAAAAAAAAAAAAAAAViNmvFofQMA
-[73] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [2]
-[74] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 2095 of 1282621 compute units
-[75] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
-[76] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 80211 of 1358533 compute units
-[77] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
-[78] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]
-[79] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 118 of 1278322 compute units
-[80] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[81] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU invoke [1]
-[82] Program log: Instruction: TransferAllTokens
-[83] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[84] Program log: Instruction: TransferChecked
-[85] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2562 of 1269828 compute units
-[86] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[87] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU consumed 11324 of 1278204 compute units
-[88] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU success
-[89] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [1]
-[90] Program log: Instruction: CloseAccount
-[91] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 1464 of 1266880 compute units
-[92] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[93] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU invoke [1]
-[94] Program log: Instruction: TransferAllSol
-[95] Program 11111111111111111111111111111111 invoke [2]
-[96] Program 11111111111111111111111111111111 success
-[97] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU consumed 3181 of 1265416 compute units
-[98] Program EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU success
-[99] Program 11111111111111111111111111111111 invoke [1]
-[100] Program 11111111111111111111111111111111 success
+[05] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[06] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 179 of 294499 compute units
+[07] Program return: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA pQAAAAAAAAA=
+[08] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[09] Program 11111111111111111111111111111111 invoke [2]
+[10] Program 11111111111111111111111111111111 success
+[11] Program log: Initialize the associated token account
+[12] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[13] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 37 of 289410 compute units
+[14] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[15] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[16] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 229 of 286949 compute units
+[17] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[18] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 13413 of 299850 compute units
+[19] Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success
+[20] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [1]
+[21] Program log: Instruction: BuyExactQuoteIn
+[22] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ invoke [2]
+[23] Program log: Instruction: GetFees
+[24] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ consumed 5660 of 244691 compute units
+[25] Program return: pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ GQAAAAAAAAAFAAAAAAAAAAAAAAAAAAAA
+[26] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ success
+[27] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[28] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 234095 compute units
+[29] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[30] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[31] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 231479 compute units
+[32] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[33] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[34] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 228615 compute units
+[35] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[36] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[37] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 224006 compute units
+[38] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[39] Program data: Z/RSHyz1d3dCdHZqAAAAALcbx2cAAAAAZSWqYsQAAAAAAAAAAAAAAMAedDApAwAAVcGz9E0AAACldcqbUJIAAGUlqmLEAAAAGQAAAAAAAAD3i099AAAAAAUAAAAAAAAAy+gPGQAAAACaPJpJxAAAAKOwSszDAAAAR9OoFwJoExclijOabnQ4OVLJDtZ7+XOiAo3ROQW30VgMfYbEewnHWO8vKlWvSewRvNHItggYohldFaBkHAHgYYHho/OjefatZLca6cFvOEkI5KRW93xgCBNXaBLuyKpnC1B4jzo7bh1MYLVaWsz5Gg09Zr8t0Q3lzBaM/n1j+gpKwvjQ3Vy8l+MonBl8tQYqVPPZVrnOblEV+WVnqlyz5t+aBhhgCGmMclsRkum4OVQKbjU1WqBIiJL4A8OIagzSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6yLAXwAAAAASAAAAYnV5X2V4YWN0X3F1b3RlX2luAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAAZfSHDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+[40] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [2]
+[41] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 2095 of 216116 compute units
+[42] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
+[43] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 74593 of 286437 compute units
+[44] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
+[45] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]
+[46] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 118 of 211844 compute units
+[47] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
 
 ==================================================================================================
 SBF BYTECODE DISASSEMBLY STREAM (PROGRAM BY PROGRAM)
 ==================================================================================================
 
-📍 PROGRAM ID: ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL
+📍 PROGRAM ID: pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA
 PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
+--------------------------------------------------------------------------------------------------
+PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L10
+PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L12
+PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L14
+PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L16
+PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L18
+PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L20
+PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L22
+PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L24
+PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L26
+PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L28
+PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L30
+PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L32
+PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L34
+PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L36
+PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L38
+PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L40
+PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L42
+PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L44
+PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L46
+PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L48
+
+📍 PROGRAM ID: ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knLPPC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
+--------------------------------------------------------------------------------------------------
+PC [0000] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | no_dwarf_symbol
+PC [0001] | 55 02 01 00 00 00 00 00 | if r2 != 0x0 goto +1      | no_dwarf_symbol
+PC [0002] | 95 00 00 00 00 00 00 00 | exit / return             | no_dwarf_symbol
+PC [0003] | 61 12 08 00 00 00 00 00 | r2 = [r1 + 8]             | no_dwarf_symbol
+PC [0004] | 55 02 fd ff 0e 00 00 00 | if r2 != 0xe goto +-3     | no_dwarf_symbol
+PC [0005] | 79 12 18 00 00 00 00 00 | r2 = [r1 + 24]            | no_dwarf_symbol
+PC [0006] | 15 02 fb ff 00 00 00 00 | if r2 == 0x0 goto +-5     | no_dwarf_symbol
+PC [0007] | 79 11 10 00 00 00 00 00 | r1 = [r1 + 16]            | no_dwarf_symbol
+PC [0008] | 15 01 f9 ff 00 00 00 00 | if r1 == 0x0 goto +-7     | no_dwarf_symbol
+PC [0009] | b7 03 00 00 01 00 00 00 | r3 = 0x1                  | no_dwarf_symbol
+PC [0010] | 85 10 00 00 93 0d 00 00 | call helper/func 0xd93    | no_dwarf_symbol
+PC [0011] | 05 00 f6 ff 00 00 00 00 | jmp +-10                  | no_dwarf_symbol
+PC [0012] | 79 12 08 00 00 00 00 00 | r2 = [r1 + 8]             | no_dwarf_symbol
+PC [0013] | 15 02 04 00 00 00 00 00 | if r2 == 0x0 goto +4      | no_dwarf_symbol
+PC [0014] | 79 11 00 00 00 00 00 00 | r1 = [r1 + 0]             | no_dwarf_symbol
+PC [0015] | 15 01 02 00 00 00 00 00 | if r1 == 0x0 goto +2      | no_dwarf_symbol
+PC [0016] | b7 03 00 00 01 00 00 00 | r3 = 0x1                  | no_dwarf_symbol
+PC [0017] | 85 10 00 00 8c 0d 00 00 | call helper/func 0xd8c    | no_dwarf_symbol
+PC [0018] | 95 00 00 00 00 00 00 00 | exit / return             | no_dwarf_symbol
+PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | no_dwarf_symbol
+PC [0020] | bf 16 00 00 00 00 00 00 | r6 = r1                   | no_dwarf_symbol
+PC [0021] | 79 62 08 00 00 00 00 00 | r2 = [r6 + 8]             | no_dwarf_symbol
+PC [0022] | 15 02 06 00 00 00 00 00 | if r2 == 0x0 goto +6      | no_dwarf_symbol
+PC [0023] | 79 61 00 00 00 00 00 00 | r1 = [r6 + 0]             | no_dwarf_symbol
+PC [0024] | 15 01 04 00 00 00 00 00 | if r1 == 0x0 goto +4      | no_dwarf_symbol
+PC [0025] | 27 02 00 00 22 00 00 00 | r2 *= 0x22                | no_dwarf_symbol
+PC [0026] | 15 02 02 00 00 00 00 00 | if r2 == 0x0 goto +2      | no_dwarf_symbol
+PC [0027] | b7 03 00 00 01 00 00 00 | r3 = 0x1                  | no_dwarf_symbol
+PC [0028] | 85 10 00 00 81 0d 00 00 | call helper/func 0xd81    | no_dwarf_symbol
+PC [0029] | 79 62 20 00 00 00 00 00 | r2 = [r6 + 32]            | no_dwarf_symbol
+PC [0030] | 15 02 04 00 00 00 00 00 | if r2 == 0x0 goto +4      | no_dwarf_symbol
+PC [0031] | 79 61 18 00 00 00 00 00 | r1 = [r6 + 24]            | no_dwarf_symbol
+PC [0032] | 15 01 02 00 00 00 00 00 | if r1 == 0x0 goto +2      | no_dwarf_symbol
+PC [0033] | b7 03 00 00 01 00 00 00 | r3 = 0x1                  | no_dwarf_sPC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
 --------------------------------------------------------------------------------------------------
 PC [0000] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | no_dwarf_symbol
 PC [0001] | 55 02 01 00 00 00 00 00 | if r2 != 0x0 goto +1      | no_dwarf_symbol
@@ -11335,122 +11340,26 @@ PC [11504] | 4f 40 00 00 00 00 00 00 | opcode 0x4f dst=r0 src=r4 off=0 imm=0x0 |
 PC [11505] | 7b 01 00 00 00 00 00 00 | [r1 + 0] = r0             | no_dwarf_symbol
 PC [11506] | 95 00 00 00 00 00 00 00 | exit / return             | no_dwarf_symbol
 
-📍 PROGRAM ID: TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
+📍 PROGRAM ID: ComputeBudget111111111111111111111111111111
 PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
 --------------------------------------------------------------------------------------------------
-PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L10
-PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L12
-PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L14
-PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L16
-PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L18
-PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L20
-PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L22
-PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L24
-PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L26
-PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L28
-PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L30
-PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L32
-PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L34
-PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L36
-PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L38
-PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L40
-PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L42
-PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L44
-PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L46
-PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb/src/processor.rs:L48
-
-📍 PROGRAM ID: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
-PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
---------------------------------------------------------------------------------------------------
-PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L10
-PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L12
-PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L14
-PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L16
-PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L18
-PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L20
-PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L22
-PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L24
-PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L26
-PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L28
-PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L30
-PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L32
-PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L34
-PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L36
-PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L38
-PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L40
-PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L42
-PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L44
-PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L46
-PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA/src/processor.rs:L48
-
-📍 PROGRAM ID: pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA
-PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
---------------------------------------------------------------------------------------------------
-PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L10
-PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L12
-PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L14
-PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L16
-PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L18
-PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L20
-PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L22
-PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L24
-PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L26
-PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L28
-PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L30
-PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L32
-PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L34
-PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L36
-PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L38
-PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L40
-PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L42
-PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L44
-PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L46
-PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA/src/processor.rs:L48
-
-📍 PROGRAM ID: 11111111111111111111111111111111
-PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
---------------------------------------------------------------------------------------------------
-PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 11111111111111111111111111111111/src/processor.rs:L10
-PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 11111111111111111111111111111111/src/processor.rs:L12
-PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 11111111111111111111111111111111/src/processor.rs:L14
-PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 11111111111111111111111111111111/src/processor.rs:L16
-PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 11111111111111111111111111111111/src/processor.rs:L18
-PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 11111111111111111111111111111111/src/processor.rs:L20
-PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 11111111111111111111111111111111/src/processor.rs:L22
-PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 11111111111111111111111111111111/src/processor.rs:L24
-PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 11111111111111111111111111111111/src/processor.rs:L26
-PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 11111111111111111111111111111111/src/processor.rs:L28
-PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 11111111111111111111111111111111/src/processor.rs:L30
-PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 11111111111111111111111111111111/src/processor.rs:L32
-PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 11111111111111111111111111111111/src/processor.rs:L34
-PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 11111111111111111111111111111111/src/processor.rs:L36
-PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 11111111111111111111111111111111/src/processor.rs:L38
-PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 11111111111111111111111111111111/src/processor.rs:L40
-PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 11111111111111111111111111111111/src/processor.rs:L42
-PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 11111111111111111111111111111111/src/processor.rs:L44
-PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 11111111111111111111111111111111/src/processor.rs:L46
-PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 11111111111111111111111111111111/src/processor.rs:L48
-
-📍 PROGRAM ID: EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU
-PC (Idx) | Raw Bytes               | Disassembled Assembly     | Mapped Source Line
---------------------------------------------------------------------------------------------------
-PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L10
-PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L12
-PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L14
-PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L16
-PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L18
-PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L20
-PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L22
-PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L24
-PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L26
-PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L28
-PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L30
-PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L32
-PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L34
-PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L36
-PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L38
-PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L40
-PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L42
-PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L44
-PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L46
-PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 EmTX93xYtDE3h7G5EF2m9VRPE1UT1XBoohpVmEzE4oEU/src/processor.rs:L48
+PC [0000] | b7 01 00 00 00 00 00 00 | r1 = 0x0                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L10
+PC [0001] | 79 12 00 00 00 00 00 00 | r2 = [r1 + 0]             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L12
+PC [0002] | 15 02 04 00 02 00 00 00 | if r2 == 0x2 goto +4      | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L14
+PC [0003] | b7 00 00 00 01 00 00 00 | r0 = 0x1                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L16
+PC [0004] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L18
+PC [0005] | 79 13 08 00 00 00 00 00 | r3 = [r1 + 8]             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L20
+PC [0006] | 79 14 10 00 00 00 00 00 | r4 = [r1 + 16]            | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L22
+PC [0007] | 79 35 00 00 00 00 00 00 | r5 = [r3 + 0]             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L24
+PC [0008] | 79 46 00 00 00 00 00 00 | r6 = [r4 + 0]             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L26
+PC [0009] | 79 17 18 00 00 00 00 00 | r7 = [r1 + 24]            | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L28
+PC [0010] | 2d 75 03 00 00 00 00 00 | if r5 > r7 goto +3        | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L30
+PC [0011] | b7 00 00 00 02 00 00 00 | r0 = 0x2                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L32
+PC [0012] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L34
+PC [0013] | 1f 75 00 00 00 00 00 00 | r5 -= r7                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L36
+PC [0014] | 0f 76 00 00 00 00 00 00 | r6 += r7                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L38
+PC [0015] | 7b 53 00 00 00 00 00 00 | [r3 + 0] = r5             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L40
+PC [0016] | 7b 64 00 00 00 00 00 00 | [r4 + 0] = r6             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L42
+PC [0017] | 85 00 00 00 01 00 00 00 | call helper/func 0x1      | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L44
+PC [0018] | b7 00 00 00 00 00 00 00 | r0 = 0x0                  | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L46
+PC [0019] | 95 00 00 00 00 00 00 00 | exit / return             | 📍 ComputeBudget111111111111111111111111111111/src/processor.rs:L48
