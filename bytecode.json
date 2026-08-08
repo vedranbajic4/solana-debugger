@@ -1,58 +1,130 @@
 {
-  "signature": "QCvfWkQotcczpaX77he7hMh4uY8tpQL61afCR1qfDo7Wrhc6ETC6WTCiS6WzqwqEHDvxoWDTY7hNNZhJ4vngwhQ",
-  "slot": 438017398,
+  "signature": "4PPbgM2awDQz4XV5TJ6Nn61HEiVM2gbPccjrj51D1CiTbRt4E8ExtRyt3PaC8zhTQYPntfTWMKzhYktyQGjP1khH",
+  "slot": 1314,
   "executionStatus": "FAILED ❌",
-  "computeUnits": 65752,
+  "computeUnits": 2159,
   "decodedError": {
-    "code": 1,
-    "hexCode": "0x0001",
-    "name": "ProgramError::Custom(1)",
-    "msg": "Execution failure (Error Code: 1)"
+    "code": 6000,
+    "hexCode": "0x1770",
+    "name": "AnchorError::SlippageExceeded",
+    "msg": "Custom program execution failure (Error Code: 6000, Hex: 0x1770)"
   },
   "decodedInstructions": [
     {
-      "programId": "ComputeBudget111111111111111111111111111111",
-      "programLabel": "Compute Budget Program",
-      "name": "SetComputeUnitPrice",
-      "discriminatorHex": "03fe010000000000",
-      "decodedArgs": "price: 510 micro-lamports/CU",
-      "dataHex": "03fe01000000000000"
-    },
-    {
-      "programId": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-      "programLabel": "Associated Token Account Program",
-      "name": "createIdempotent",
-      "discriminatorHex": "",
-      "decodedArgs": "account: \"7BF2iG5Zab6H4hzqLDvwvuS1FB3rDfssn9zUvLDdN8me\", mint: \"So11111111111111111111111111111111111111112\", source: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\", systemProgram: \"11111111111111111111111111111111\", tokenProgram: \"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA\", wallet: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\"",
-      "dataHex": ""
-    },
-    {
-      "programId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
-      "programLabel": "Pump.fun AMM Program",
-      "name": "buy_exact_quote_in",
-      "discriminatorHex": "c62e1552b4d9e870",
-      "decodedArgs": "amount_in: 25757442382",
-      "dataHex": "c62e1552b4d9e8704e6143ff050000000366673a0000000001"
-    },
-    {
-      "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-      "programLabel": "SPL Token Program",
-      "name": "closeAccount",
-      "discriminatorHex": "",
-      "decodedArgs": "account: \"7BF2iG5Zab6H4hzqLDvwvuS1FB3rDfssn9zUvLDdN8me\", destination: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\", owner: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\"",
-      "dataHex": ""
+      "programId": "6kvVrJwLEZeiThd4RnfQE1to3ZuSHHtChE2HMaA5ez4Q",
+      "programLabel": "Program (6kvVrJwL)",
+      "name": "Instruction (0xfd09fc27)",
+      "discriminatorHex": "fd09fc27e658e99e",
+      "decodedArgs": "amount_in: 500",
+      "dataHex": "fd09fc27e658e99ef401000000000000"
     }
   ],
-  "accountValidations": [],
+  "accountValidations": [
+    {
+      "programId": "AnchorFramework",
+      "errorName": "AccountValidationError",
+      "message": "Program log: AnchorError thrown in programs/test_fail/src/lib.rs:15. Error Code: InputTooLarge. Error Number: 6000. Error Message: The input value provided is way too large. Max is 100.."
+    }
+  ],
   "failureContext": {
-    "failedProgramId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    "failedProgramId": "6kvVrJwLEZeiThd4RnfQE1to3ZuSHHtChE2HMaA5ez4Q",
     "failedInstructionIndex": null,
-    "sourceLocation": null
+    "sourceLocation": {
+      "file": "programs/test_fail/src/lib.rs",
+      "line": 15,
+      "column": 0
+    }
   },
   "sourceContext": {
-    "available": false,
-    "fileName": null,
-    "errorLine": null,
-    "sourceLines": []
+    "available": true,
+    "fileName": "src/lib.rs",
+    "errorLine": 15,
+    "sourceLines": [
+      {
+        "line": 5,
+        "text": "#[program]"
+      },
+      {
+        "line": 6,
+        "text": "pub mod test_fail {"
+      },
+      {
+        "line": 7,
+        "text": "    use super::*;"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "    pub fn trigger_error(ctx: Context<TriggerError>, input_value: u64) -> Result<()> {"
+      },
+      {
+        "line": 10,
+        "text": "        msg!(\"Instruction executed with input: {}\", input_value);"
+      },
+      {
+        "line": 11,
+        "text": "        "
+      },
+      {
+        "line": 12,
+        "text": "        let max_allowed = 100;"
+      },
+      {
+        "line": 13,
+        "text": "        "
+      },
+      {
+        "line": 14,
+        "text": "        // This will deliberately fail on line 12 if input_value > 100"
+      },
+      {
+        "line": 15,
+        "text": "        require!(",
+        "isError": true
+      },
+      {
+        "line": 16,
+        "text": "            input_value <= max_allowed,"
+      },
+      {
+        "line": 17,
+        "text": "            CustomError::InputTooLarge"
+      },
+      {
+        "line": 18,
+        "text": "        );"
+      },
+      {
+        "line": 19,
+        "text": ""
+      },
+      {
+        "line": 20,
+        "text": "        msg!(\"Success!\");"
+      },
+      {
+        "line": 21,
+        "text": "        Ok(())"
+      },
+      {
+        "line": 22,
+        "text": "    }"
+      },
+      {
+        "line": 23,
+        "text": "}"
+      },
+      {
+        "line": 24,
+        "text": ""
+      },
+      {
+        "line": 25,
+        "text": "#[derive(Accounts)]"
+      }
+    ]
   }
 }
