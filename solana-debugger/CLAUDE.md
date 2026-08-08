@@ -8,53 +8,43 @@ A small CLI toolkit for debugging Solana transactions: fetching a transaction fr
 
 ## Commands
 
-```bash
-npm run fetch <SIGNATURE>               # root-cause SUMMARY + what moved (~780 bytes)
-npm run fetch <SIGNATURE> -- --verbose  # ...plus every detail section (~21KB)
-npm run replay <SIGNATURE>              # replay against a local surfnet and diff state
-npm run verify                          # replay the whole corpus, report the match rate
-npm run corpus                          # regenerate corpus.json from recent mainnet blocks
-npm run test:archive                    # check lib/archive.ts against a mock archive endpoint
-npm run test:cpi -- --live              # check the log parser against the corpus
-npm run test:report -- --all            # build a DebugReport for every corpus tx
-```
+The script list is in `package.json`; env vars are documented in `.env.example`. What neither file can tell you:
 
-Note the `--` before `--verbose`: without it npm consumes the flag itself and the script never sees it. Same for `npm run verify -- --only failed`, `-- --limit 5`, `-- -v`, `-- --json`.
+- **Flags need `--` first, or npm eats them**: `npm run fetch <SIG> -- --verbose`, `npm run verify -- --only failed`, `-- --limit 5`, `-- --json`. Without it the script never sees the flag.
+- **`npm run replay` and `npm run verify` need a surfnet running locally** (`SURFNET_RPC`, default `http://127.0.0.1:8899`). Nothing starts one for you.
+- **`npm run verify` is the closest thing to a test suite** — and the number that says whether anything else here means anything. See "Verifying the replay" below. The `test:*` scripts cover narrower pieces; `test:cpi` and `test:report` take `--live`/`--all` to run against the corpus instead of fixtures.
+- **`ARCHIVE_RPC` unset is a supported configuration**, not a degraded one that needs apologising for in the code.
 
-All scripts load env vars from `.env` (see `.env.example`):
-- `RPC_URL` — mainnet/devnet RPC endpoint (required by all of them).
-- `SURFNET_RPC` — local surfnet validator JSON-RPC URL, defaults to `http://127.0.0.1:8899` (used by `replay-tx.ts` and `verify-replay.ts`; a surfnet instance must be running locally for replay to work).
-- `ARCHIVE_RPC` — **optional** endpoint serving historical account state, see "Historical account state" below. Unset is a supported configuration, not a degraded one that needs apologising for in the code.
-
-There is no build step (`tsx` runs the `.ts` files directly) and no lint script. `npm run verify` is the closest thing to a test suite — see "Verifying the replay" below. Typecheck with `npx tsc --noEmit`.
+There is no build step — `tsx` runs the `.ts` files directly — and no lint script.
 
 ## Architecture
 
-- **`fetch-tx.ts`** — entry point for `npm run fetch`. It's a linear script, not a library, with a deliberate two-tier output:
-  - **Default (~780 bytes)**: the root-cause `SUMMARY`, then BALANCE/TOKEN DELTAS — what failed and what moved, nothing else. `main()` `return`s at the `if (!verbose)` boundary.
-  - **`--verbose` (~21KB)**: everything after that boundary — STATUS, RESOLVED ERROR, COMPUTE BUDGET, FEE, LOG MESSAGES, TOP-LEVEL/INNER INSTRUCTIONS, ACCOUNT KEYS TOUCHED, RAW META.
+Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comment saying what it does and why — read those rather than duplicating them here.
 
-  Three rules keep the tiers honest when adding sections. Everything the summary needs is computed in one GATHER block before any output, so detail sections reuse those values rather than recomputing. Anything that changes how much to *trust* the summary — the CPI-attribution caveat, truncated logs — is a `warning` row in the summary, never only in a hidden section. And a section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
-- **`lib/summary.ts`** — log-derived context for the summary. `parseAnchorError()` pulls the source `file:line`, the offending account/constraint, and the human-readable message out of Anchor's one-line `AnchorError` log (it has several shapes — `thrown in …`, `caused by account: …`, bare `occurred` — so every field is independently optional). `findLogHint()` covers non-Anchor programs by returning the last thing a program actually logged before the first failure line, skipping runtime bookkeeping and Anchor's `Instruction: …` dispatch trace.
-- **`replay-tx.ts`** — entry point for `npm run replay`. A printer over `lib/replay.ts`: fetching, forking, seeding and simulating all live in the library, and this file only decides how to render the result. Keep it that way — logic that lands here is logic `verify-replay.ts` can't measure.
-- **`lib/prestate.ts`** — `seedPreState()` writes the tx's recorded pre-execution balances back onto the fork via the `surfnet_setAccount` cheatcode, so the replay starts from the state the tx actually ran against. See "Fork fidelity" below — the ordering constraints here are load-bearing.
-- **`lib/accounts.ts`** — the state-diff layer. `snapshotFromAccountInfo()`/`snapshotFromSimulated()` normalize an RPC `AccountInfo` and a `SimulatedTransactionAccountInfo` (whose `data` is a `[base64, "base64"]` tuple) into one `AccountSnapshot`, where `null` means "does not exist". `diffAccount()` returns null when nothing changed, else reports lamports/owner/data-length changes, a changed-byte count with first offset for opaque program state, and a decoded token-balance delta. `decodeTokenAccount()` is deliberately strict — it checks the owning program and, past 165 bytes, the Token-2022 `account_type` tag, since a mis-decode would print a confident fake balance.
-- **`lib/decode.ts`** — `normalizeInstructions()` flattens legacy vs. v0 (versioned, with address-lookup-table support) transaction messages into one common `NormalizedIx[]` shape (`programId`, `accounts` with signer/writable flags, `dataBase64`). `decodeComputeBudgetIx()` decodes ComputeBudget111... instruction data by its first-byte discriminant.
-- **`lib/errors.ts`** — `resolveCustomError(connection, programId, code)` resolves a raw `Custom(n)` instruction error through a fallback chain, from strongest to weakest evidence, and returns `{ source, ... }` rather than ever guessing:
-  1. on-chain Anchor IDL for that exact program (`tryFetchAnchorIdl`, reads the `anchor:idl` seeded PDA account and zlib-inflates it)
-  2. hand-maintained per-program tables in `lib/program-errors.ts` (`KNOWN_PROGRAM_ERRORS`, `PROGRAM_NAMES`)
-  3. Anchor's reserved framework error range in `lib/anchor-errors.ts` (`ANCHOR_FRAMEWORK_ERRORS`, `isAnchorFrameworkRange`) — only a guess that the program *is* Anchor-based
-  4. `source: "unknown"` with the hex code and a note — when adding new error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` rather than inventing a guess at this layer.
+| file | role |
+|---|---|
+| `fetch-tx.ts` | `npm run fetch` — decoded post-mortem, two-tier output |
+| `replay-tx.ts` | `npm run replay` — printer over `lib/replay.ts` |
+| `verify-replay.ts` | `npm run verify` — batch replay, match rate |
+| `build-corpus.ts` | `npm run corpus` — samples mainnet blocks into `corpus.json` |
+| `lib/replay.ts` | the replay pipeline; its step order is load-bearing |
+| `lib/prestate.ts` | seeds the tx's recorded pre-state onto the fork |
+| `lib/archive.ts` | historical account state from an archive RPC |
+| `lib/nonce.ts` | durable-nonce detection and seeding |
+| `lib/accounts.ts` | account snapshot and diff |
+| `lib/cpi-tree.ts` | logs → call tree, self-CU, deepest failed frame |
+| `lib/report.ts` | `DebugReport` — the conclusions as data |
+| `lib/errors.ts` | resolves `Custom(n)` through a fallback chain |
+| `lib/summary.ts` | Anchor error and log-hint extraction |
+| `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
+| `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
 
-  `findFailingProgramInLogs(logs, code)` in the same module decides *which* program the code should be resolved against — see the CPI gotcha below.
-- **`lib/surfnet.ts`** — `surfnetCall(url, method, params)`, a thin JSON-RPC POST helper for surfnet-specific methods (e.g. `surfnet_timeTravel`) that aren't part of the standard Solana RPC and thus aren't on `@solana/web3.js`'s `Connection`.
-- **`lib/replay.ts`** — the replay pipeline itself, shared by `replay-tx.ts` and `verify-replay.ts` so the measured match rate describes the code users actually run. `replayTransaction()` prints nothing and returns a `ReplayResult`; it throws `ReplayError` only when there's no outcome to compare at all (tx not found, no meta, the simulate call itself failed). The step order — fetch, fork, read-all, seed, snapshot, simulate — is load-bearing; see "Fork fidelity".
-- **`lib/nonce.ts`** — durable-nonce support. `findDurableNonce()` recognises a tx whose *first* instruction is System `AdvanceNonceAccount` (only the first position counts to the runtime), and `seedNonceAccount()` writes the tx's nonce into the account so the tx's own "blockhash" validates. See the durable-nonce gotcha below.
-- **`lib/corpus.ts`** — the `CorpusEntry`/`CorpusFile` types and `CORPUS_PATH`, shared by the corpus builder and the verifier.
-- **`build-corpus.ts`** — entry point for `npm run corpus`. Samples recent mainnet blocks into `corpus.json`, capped at two txs per program and four per block so one busy AMM or one leader's slots can't dominate the match rate. Candidates are ranked by an `interestScore` — token movement and CPIs beat a small account list, because selecting purely for cheap replays fills the corpus with 3-account arbitrage bots that reproduce trivially and prove nothing.
-- **`verify-replay.ts`** — entry point for `npm run verify`. See "Verifying the replay" below.
-- **`lib/cpi-tree.ts`** — rebuilds the runtime's call tree from `meta.logMessages`. `meta.innerInstructions` says which CPIs ran but not how they went: compute consumed, what each program logged, and which frame actually failed live only in the logs. `selfCu` is a frame's consumption minus its children's, so "expensive" means the program's own work rather than its callees'. `deepestFailedFrame()` is the culprit — failure propagates outward, so every frame on the stack reports failed and only the innermost is the origin. Parsing is deliberately tolerant: truncated logs are the common case on exactly the transactions worth debugging, so an unclosed frame becomes `unterminated` rather than discarding the tree.
-- **`lib/report.ts`** — `DebugReport`, the tool's conclusions about one transaction as data. Strictly serializable (base58 strings, decimal strings for u64 token amounts — no `bigint`/`Buffer`/`PublicKey`, since a report should survive JSON, disk, and a diff between runs). Confidence travels with the conclusion: `attribution.basis` records *how* the failing program was identified (`logs` = the runtime's innermost failure line, `top-level-instruction` = a guess that's wrong whenever the failure was inside a CPI), and `warnings` carries caveats a renderer must not bury.
+Four directives that outlive any single file:
+
+- **Keep `fetch-tx.ts`'s two tiers honest.** Everything the summary needs is computed in one GATHER block before any output, so detail sections reuse those values rather than recomputing. Anything that changes how much to *trust* the summary — the CPI-attribution caveat, truncated logs — is a `warning` row in the summary, never only behind `--verbose`. A section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
+- **Keep `replay-tx.ts` a printer.** Logic that lands there is logic `verify-replay.ts` can't measure.
+- **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` — see the CPI gotcha below.
+- **Keep `DebugReport` serializable.** No `bigint`/`Buffer`/`PublicKey`; u64 token amounts are decimal strings, because the report exists to survive JSON, disk, and a diff between runs.
 
 ### Fork fidelity: why `lib/prestate.ts` exists
 
@@ -147,5 +137,4 @@ The remaining mismatches are all the *same* residual cause: program-owned state 
 
 ## TypeScript/module conventions
 
-- ESM throughout (`"type": "module"`, `module: "nodenext"`) — relative imports must use `.js` extensions even though the source files are `.ts` (e.g. `import { normalizeInstructions } from "./lib/decode.js"`).
-- `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are all on — index access and optional Solana RPC fields (e.g. `meta.preTokenBalances`) need explicit narrowing/defaults.
+ESM throughout, so relative imports must use `.js` extensions even though the source files are `.ts` (e.g. `import { normalizeInstructions } from "./lib/decode.js"`). `tsconfig.json` has the rest; its strictness flags mean index access and optional Solana RPC fields (e.g. `meta.preTokenBalances`) need explicit narrowing.
