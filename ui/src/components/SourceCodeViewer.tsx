@@ -28,6 +28,7 @@ export interface FailureContextData {
 interface SourceCodeViewerProps {
   sourceContext?: SourceContextData | null;
   failureContext?: FailureContextData | null;
+  analysisSummary?: any | null;
   selectedProgramId?: string | null;
   selectedFunctionName?: string | null;
 }
@@ -133,6 +134,7 @@ function highlightRust(text: string): React.ReactNode[] {
 export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   sourceContext,
   failureContext,
+  analysisSummary,
   selectedProgramId,
   selectedFunctionName,
 }) => {
@@ -184,6 +186,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             <PseudocodeViewer 
               programId={targetProgramId} 
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
+              analysisSummary={analysisSummary}
               autoExpand={true}
             />
           </div>
@@ -229,6 +232,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             <PseudocodeViewer 
               programId={targetProgramId}
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
+              analysisSummary={analysisSummary}
               autoExpand={true}
             />
           </div>

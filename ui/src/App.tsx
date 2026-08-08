@@ -218,6 +218,7 @@ export function App() {
         <SourceCodeViewer 
           sourceContext={chunkData?.analysisSummary?.sourceContext}
           failureContext={chunkData?.analysisSummary?.failureContext}
+          analysisSummary={chunkData?.analysisSummary}
           selectedProgramId={selectedProgramId}
           selectedFunctionName={selectedFunctionName}
         />
