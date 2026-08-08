@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldAlert, Code2, Cpu, AlertTriangle, Key, Layers, Terminal } from 'lucide-react';
 import type { AnalysisSummary } from '../App';
+import { PseudocodeViewer } from './PseudocodeViewer';
 
 interface AnchorAnalysisCardProps {
   analysisSummary?: AnalysisSummary | null;
@@ -111,6 +112,8 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysis
                       <Key className="w-3 h-3 text-slate-500" />
                       <span className="truncate max-w-xs">{ix.programId}</span>
                     </div>
+                    
+                    <PseudocodeViewer programId={ix.programId} />
                   </div>
                 </div>
 

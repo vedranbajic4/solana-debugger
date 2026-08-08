@@ -130,6 +130,11 @@ impl DwarfLineMapper {
         self.pc_to_location.insert(pc_byte_offset, location);
     }
 
+    /// Retrieves the first mapped source file path, if any exists.
+    pub fn get_first_file(&self) -> Option<String> {
+        self.pc_to_location.values().next().map(|loc| loc.file_path.clone())
+    }
+
     /// Lookup source code location for a given SBF Program Counter (PC / byte offset).
     pub fn lookup_pc(&self, pc_byte_offset: u64) -> Option<&SourceLocation> {
         self.pc_to_location

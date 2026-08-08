@@ -160,6 +160,45 @@ app.get('/api/bytecode/raw', async (req, res) => {
   }
 });
 
+app.get('/api/pseudocode/:programId', async (req, res) => {
+  const { programId } = req.params;
+  const soPath = path.join(rootDir, `${programId}.so`);
+  const cPath = path.join(rootDir, `${programId}.c`);
+
+  try {
+    try {
+      const existingC = await fs.readFile(cPath, 'utf-8');
+      return res.json({ success: true, pseudocode: existingC });
+    } catch (e) {
+      // Not yet decompiled
+    }
+
+    try {
+      await fs.access(soPath);
+    } catch (e) {
+      return res.status(404).json({ error: `Program ELF (${programId}.so) not found. Try analyzing a transaction first.` });
+    }
+
+    const decompileScript = path.join(rootDir, 'scripts', 'decompile_so.sh');
+    const command = `${decompileScript} ${soPath} ${cPath}`;
+    
+    exec(command, { cwd: rootDir }, async (error, stdout, stderr) => {
+      if (error) {
+        return res.status(500).json({ error: 'Failed to decompile', details: error.message });
+      }
+      try {
+        const generatedC = await fs.readFile(cPath, 'utf-8');
+        res.json({ success: true, pseudocode: generatedC });
+      } catch (readErr) {
+        res.status(500).json({ error: 'Failed to read decompiled file', details: readErr.message });
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`⚡ Solana Debugger API Server running at http://localhost:${PORT}`);
 });

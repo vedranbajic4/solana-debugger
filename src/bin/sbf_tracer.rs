@@ -382,21 +382,112 @@ fn main() -> Result<()> {
         }
     }
 
+    // --- SUCCESSFUL TRANSACTION SOURCE CODE FALLBACK ---
+    if analysis.source_context.is_none() {
+        println!("🔎 Attempting successful transaction source code fallback...");
+        for pid in &program_ids {
+            let pid_str = pid.to_string();
+            if pid_str == "11111111111111111111111111111111" || pid_str == "ComputeBudget111111111111111111111111111111" {
+                continue;
+            }
+
+            println!("🔎 Fetching account for PID: {}", pid_str);
+            if let Ok(mut account) = rpc_client.get_account(pid) {
+                // If it's an upgradeable program, fetch ProgramData instead
+                if account.owner.to_string() == "BPFLoaderUpgradeab1e11111111111111111111111" && account.data.len() >= 36 && account.data[0..4] == [2, 0, 0, 0] {
+                    let mut programdata_addr = [0u8; 32];
+                    programdata_addr.copy_from_slice(&account.data[4..36]);
+                    let pd_key = Pubkey::new_from_array(programdata_addr);
+                    if let Ok(pd_account) = rpc_client.get_account(&pd_key) {
+                        account = pd_account;
+                    }
+                }
+
+                // Find ELF start offset (ProgramData has a header)
+                let elf_offset = account.data.windows(4).position(|window| window == b"\x7fELF").unwrap_or(0);
+                if elf_offset < account.data.len() && account.data[elf_offset..].len() > 4 && &account.data[elf_offset..elf_offset+4] == b"\x7fELF" {
+                    let elf_bytes = &account.data[elf_offset..];
+                    println!("🔎 Parsed ELF for PID: {}", pid_str);
+                    let dwarf = DwarfLineMapper::parse_elf(elf_bytes).unwrap_or_else(|_| DwarfLineMapper::new());
+                    println!("🔎 Mappings count: {}", dwarf.mappings_count());
+                    if dwarf.mappings_count() > 0 {
+                        if let Some(file_path) = dwarf.get_first_file() {
+                            println!("🔎 First file found: {}", file_path);
+                            let workspace_root = env::current_dir().ok().map(|p| p.to_string_lossy().to_string());
+                            let source_ctx = SourceFetcher::fetch_source_context(
+                                &file_path,
+                                0, // 0 will return the whole file
+                                workspace_root.as_deref(),
+                                Some(&pid_str),
+                            );
+                            
+                            analysis.source_context = Some(source_ctx);
+                            break;
+                        } else {
+                            println!("🔎 First file was None!");
+                        }
+                    } else {
+                        println!("🔎 No DWARF mappings! Guessing Anchor file path...");
+                        let program_label = debugger::AnchorDecoder::get_program_label(&pid_str);
+                        let guessed_path = format!("programs/{}/src/lib.rs", program_label);
+                        let workspace_root = env::current_dir().ok().map(|p| p.to_string_lossy().to_string());
+                        let source_ctx = SourceFetcher::fetch_source_context(
+                            &guessed_path,
+                            0,
+                            workspace_root.as_deref(),
+                            Some(&pid_str),
+                        );
+                        
+                        if source_ctx.available || !source_ctx.source_lines.is_empty() {
+                            analysis.source_context = Some(source_ctx);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     writeln!(out_file, "\n==================================================================================================")?;
     writeln!(out_file, "SBF BYTECODE DISASSEMBLY STREAM (PROGRAM BY PROGRAM)")?;
     writeln!(out_file, "==================================================================================================")?;
 
     for pid in program_ids {
         writeln!(out_file, "\n📍 PROGRAM ID: {}", pid)?;
-        let fetched_account = rpc_client.get_account(&pid).ok();
+        let mut fetched_account = rpc_client.get_account(&pid).ok();
 
-        let is_elf = fetched_account
-            .as_ref()
-            .map(|a| a.data.len() > 4 && &a.data[0..4] == b"\x7fELF")
-            .unwrap_or(false);
+        // Handle BPF Upgradeable Loader
+        if let Some(ref acc) = fetched_account {
+            if acc.owner.to_string() == "BPFLoaderUpgradeab1e11111111111111111111111" && acc.data.len() >= 36 && acc.data[0..4] == [2, 0, 0, 0] {
+                let mut programdata_addr = [0u8; 32];
+                programdata_addr.copy_from_slice(&acc.data[4..36]);
+                let pd_key = Pubkey::new_from_array(programdata_addr);
+                if let Ok(pd_account) = rpc_client.get_account(&pd_key) {
+                    fetched_account = Some(pd_account);
+                }
+            }
+        }
+
+        let mut elf_bytes_vec = Vec::new();
+        let is_elf = if let Some(ref acc) = fetched_account {
+            if let Some(elf_offset) = acc.data.windows(4).position(|window| window == b"\x7fELF") {
+                elf_bytes_vec = acc.data[elf_offset..].to_vec();
+                
+                // Write ELF to disk for Ghidra decompilation
+                let so_path = format!("{}.so", pid);
+                std::fs::write(&so_path, &elf_bytes_vec).unwrap_or_default();
+                println!("✅ Saved ELF to: {}", so_path);
+                
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         let (elf_bytes, is_native) = if is_elf {
-            (fetched_account.unwrap().data, false)
+            (elf_bytes_vec, false)
         } else {
             // Built-in or loader account; fallback to full SBF bytecode disassembly stream
             (
