@@ -1,33 +1,51 @@
 {
-  "signature": "2KzYn2deRFGbb9VEtK8ov48M1x3CahkLuaNz8tAjvjj1sEMoPUECxJXUkv9wLAs8348MZSwotLU2555oNBvYytqf",
-  "slot": 2863,
+  "signature": "QCvfWkQotcczpaX77he7hMh4uY8tpQL61afCR1qfDo7Wrhc6ETC6WTCiS6WzqwqEHDvxoWDTY7hNNZhJ4vngwhQ",
+  "slot": 438017398,
   "executionStatus": "FAILED ❌",
-  "computeUnits": 1392,
+  "computeUnits": 65752,
   "decodedError": {
-    "code": 4100,
-    "hexCode": "0x1004",
-    "name": "ProgramError::Custom(4100)",
-    "msg": "Execution failure (Error Code: 4100)"
+    "code": 1,
+    "hexCode": "0x0001",
+    "name": "ProgramError::Custom(1)",
+    "msg": "Execution failure (Error Code: 1)"
   },
   "decodedInstructions": [
     {
-      "programId": "6kvVrJwLEZeiThd4RnfQE1to3ZuSHHtChE2HMaA5ez4Q",
-      "programLabel": "Program (6kvVrJwL)",
-      "name": "Instruction (0xfd09fc27)",
-      "discriminatorHex": "fd09fc27e658e99e",
-      "decodedArgs": "amount_in: 500",
-      "dataHex": "fd09fc27e658e99ef401000000000000"
-    }
-  ],
-  "accountValidations": [
+      "programId": "ComputeBudget111111111111111111111111111111",
+      "programLabel": "Compute Budget Program",
+      "name": "SetComputeUnitPrice",
+      "discriminatorHex": "03fe010000000000",
+      "decodedArgs": "price: 510 micro-lamports/CU",
+      "dataHex": "03fe01000000000000"
+    },
     {
-      "programId": "AnchorFramework",
-      "errorName": "AccountValidationError",
-      "message": "Program log: AnchorError occurred. Error Code: DeclaredProgramIdMismatch. Error Number: 4100. Error Message: The declared program id does not match the actual program id."
+      "programId": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "programLabel": "Associated Token Account Program",
+      "name": "createIdempotent",
+      "discriminatorHex": "",
+      "decodedArgs": "account: \"7BF2iG5Zab6H4hzqLDvwvuS1FB3rDfssn9zUvLDdN8me\", mint: \"So11111111111111111111111111111111111111112\", source: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\", systemProgram: \"11111111111111111111111111111111\", tokenProgram: \"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA\", wallet: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\"",
+      "dataHex": ""
+    },
+    {
+      "programId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      "programLabel": "Pump.fun AMM Program",
+      "name": "buy_exact_quote_in",
+      "discriminatorHex": "c62e1552b4d9e870",
+      "decodedArgs": "amount_in: 25757442382",
+      "dataHex": "c62e1552b4d9e8704e6143ff050000000366673a0000000001"
+    },
+    {
+      "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "programLabel": "SPL Token Program",
+      "name": "closeAccount",
+      "discriminatorHex": "",
+      "decodedArgs": "account: \"7BF2iG5Zab6H4hzqLDvwvuS1FB3rDfssn9zUvLDdN8me\", destination: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\", owner: \"AR3D2khvuNJLBqdBV1QfyKLnMj1EEj7nZ1F5WGZeLyoo\"",
+      "dataHex": ""
     }
   ],
+  "accountValidations": [],
   "failureContext": {
-    "failedProgramId": "6kvVrJwLEZeiThd4RnfQE1to3ZuSHHtChE2HMaA5ez4Q",
+    "failedProgramId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
     "failedInstructionIndex": null,
     "sourceLocation": null
   },

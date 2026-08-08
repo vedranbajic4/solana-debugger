@@ -38,6 +38,13 @@ fn get_rpc_client(sig_str: &str) -> RpcClient {
             if local_rpc.get_transaction_with_config(&sig, config).is_ok() {
                 return local_rpc;
             }
+            let devnet_rpc = RpcClient::new_with_commitment(
+                "https://api.devnet.solana.com".to_string(),
+                CommitmentConfig::confirmed(),
+            );
+            if devnet_rpc.get_transaction_with_config(&sig, config).is_ok() {
+                return devnet_rpc;
+            }
         }
         return RpcClient::new_with_commitment(
             "https://api.mainnet-beta.solana.com".to_string(),
@@ -79,11 +86,42 @@ fn main() -> Result<()> {
         max_supported_transaction_version: Some(0),
     };
 
-    let tx_meta = rpc_client
-        .get_transaction_with_config(&sig, config)
-        .context("Failed to fetch transaction from RPC cluster")?;
+    let tx_meta_result = rpc_client.get_transaction_with_config(&sig, config);
+    let tx_meta = match tx_meta_result {
+        Ok(meta) => meta,
+        Err(e) => {
+            println!("❌ Transaction not found on any network (Localhost, Devnet, Mainnet).");
+            println!("   RPC Error: {}", e);
+            let dummy_analysis = AnalysisSummary {
+                signature: target_sig.clone(),
+                slot: 0,
+                execution_status: "NOT FOUND ❌".to_string(),
+                compute_units: None,
+                decoded_error: None,
+                decoded_instructions: Vec::new(),
+                account_validations: Vec::new(),
+                failure_context: None,
+                source_context: None,
+            };
+            let out_json = output_filename.replace(".txt", ".json");
+            if let Ok(file) = File::create(&out_json) {
+                let _ = serde_json::to_writer_pretty(file, &dummy_analysis);
+            }
+            if let Ok(mut file) = File::create(output_filename) {
+                let _ = writeln!(file, "Transaction not found on any network.");
+            }
+            return Ok(());
+        }
+    };
 
-    let mut analysis = AnalysisSummary {
+        let raw_err = if let Some(meta) = tx_meta.transaction.meta.as_ref() {
+            format!("{:?}", meta.err)
+        } else {
+            "None".to_string()
+        };
+        println!("🚨 Raw Error from Bank: {}", raw_err);
+        
+        let mut analysis = AnalysisSummary {
         signature: target_sig.clone(),
         slot: tx_meta.slot,
         execution_status: "SUCCESS ✅".to_string(),
@@ -159,6 +197,34 @@ fn main() -> Result<()> {
             source_location: None,
         };
 
+        // Fallback: Anchor prints exact file and line in logs! Let's extract it.
+        for log in &logs {
+            if log.contains("AnchorError thrown in ") {
+                if let Some(pos) = log.find("AnchorError thrown in ") {
+                    let rest = &log[pos + "AnchorError thrown in ".len()..];
+                    if let Some(end) = rest.find(". ") {
+                        let file_and_line = &rest[..end];
+                        let parts: Vec<&str> = file_and_line.split(':').collect();
+                        if parts.len() >= 2 {
+                            if let Ok(line_num) = parts[parts.len()-1].parse::<u64>() {
+                                let file_path = parts[0..parts.len()-1].join(":");
+                                println!("✅ EXTRACTED LOC FROM LOG: {} line {}", file_path, line_num);
+                                failure_ctx.source_location = Some(SourceLocationInfo {
+                                    file: file_path,
+                                    line: line_num,
+                                    column: 0,
+                                });
+                            } else {
+                                println!("❌ FAILED TO PARSE LINE NUM: {}", parts[parts.len()-1]);
+                            }
+                        } else {
+                            println!("❌ FAILED TO SPLIT FILE_AND_LINE: {}", file_and_line);
+                        }
+                    }
+                }
+            }
+        }
+
         // If we have a failed program, try to fetch its ELF and extract DWARF source location
         if let Some(ref pid_str) = failed_program_id {
             if let Ok(pid) = Pubkey::from_str(pid_str) {
@@ -170,37 +236,35 @@ fn main() -> Result<()> {
                         if dwarf.mappings_count() > 0 {
                             // Find the last mapped PC (approximate error location)
                             // In a real VM stepper, we'd have the exact PC
-                            if let Some(loc) = dwarf.lookup_pc(u64::MAX) {
-                                failure_ctx.source_location = Some(SourceLocationInfo {
-                                    file: loc.file_path.clone(),
-                                    line: loc.line,
-                                    column: loc.column,
-                                });
-
-                                // Try to fetch actual source code from local disk
-                                let workspace_root = env::current_dir()
-                                    .ok()
-                                    .map(|p| p.to_string_lossy().to_string());
-                                let source_ctx = SourceFetcher::fetch_source_context(
-                                    &loc.file_path,
-                                    loc.line,
-                                    workspace_root.as_deref(),
-                                    Some(pid_str),
-                                );
-                                analysis.source_context = Some(source_ctx);
+                            if failure_ctx.source_location.is_none() {
+                                if let Some(loc) = dwarf.lookup_pc(u64::MAX) {
+                                    failure_ctx.source_location = Some(SourceLocationInfo {
+                                        file: loc.file_path.clone(),
+                                        line: loc.line,
+                                        column: loc.column,
+                                    });
+                                }
                             }
                         } else {
                             // No DWARF debug info — program is a stripped release build
-                            analysis.source_context = Some(debugger::SourceContext {
-                                available: false,
-                                file_name: None,
-                                error_line: None,
-                                source_lines: Vec::new(),
-                            });
                         }
                     }
                 }
             }
+        }
+
+        if let Some(ref loc) = failure_ctx.source_location {
+            // Try to fetch actual source code from local disk
+            let workspace_root = env::current_dir()
+                .ok()
+                .map(|p| p.to_string_lossy().to_string());
+            let source_ctx = SourceFetcher::fetch_source_context(
+                &loc.file,
+                loc.line,
+                workspace_root.as_deref(),
+                failed_program_id.as_deref(),
+            );
+            analysis.source_context = Some(source_ctx);
         }
 
         // Ensure source_context is populated so the UI knows to show the "Not Found" banner

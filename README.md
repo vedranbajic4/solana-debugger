@@ -82,58 +82,115 @@ If you prefer running services manually without `make`:
 
 ---
 
-## 🧪 Testing with Local Source Code Debugging
+## 🧪 Testing with Source Code Debugging
 
-To see the Rust source-code debugging features in action, you need to generate a transaction on your local machine using a program compiled with debug symbols (DWARF tables).
+To see the Rust source-code debugging features in action, you need to generate a transaction using a program compiled with debug symbols (DWARF tables).
 
-### 1. Create and Deploy a Test Program
-The easiest way to do this is by creating a simple Anchor project that intentionally fails:
+There are two ways to test this:
+1. **Localhost Testing**: Fast, but the transaction hash will only work on your machine.
+2. **Devnet Testing (Collaboration)**: The transaction hash is public, so your colleagues can copy-paste it into their debugger and see the exact same Rust code.
 
-1. **Initialize the project:**
+### 🏠 Method 1: Localhost Testing
+
+1. **Create and Deploy a Test Program:**
    ```bash
    anchor init test_fail
    cd test_fail
-   ```
-
-2. **Add a deliberate panic/error** inside `programs/test_fail/src/lib.rs`.
-
-3. **Build and Deploy:**
-   ```bash
+   # Add a deliberate panic/error inside programs/test_fail/src/lib.rs
    anchor build
    anchor deploy
    ```
-   * **What this does**: `anchor build` compiles your Rust code into an SBF `.so` binary. By default, it **keeps the DWARF debug symbols** inside the binary. `anchor deploy` then pushes this binary to your currently running `solana-test-validator`.
+   *Note: `anchor build` keeps DWARF debug symbols by default.*
 
-### 2. Generate a Failing Transaction
-Write a small Node.js or Typescript script to invoke your failing instruction.
+2. **Generate a Failing Transaction:**
+   Create `tests/run_test.js`:
+   ```javascript
+   const anchor = require("@coral-xyz/anchor");
+   const fs = require("fs");
+   const os = require("os");
 
-```javascript
-const anchor = require("@coral-xyz/anchor");
-const fs = require("fs");
-const os = require("os");
+   async function main() {
+     const keypairFile = fs.readFileSync(os.homedir() + "/.config/solana/id.json");
+     const keypair = anchor.web3.Keypair.fromSecretKey(Buffer.from(JSON.parse(keypairFile)));
+     const wallet = new anchor.Wallet(keypair);
 
-async function main() {
-  const keypairFile = fs.readFileSync(os.homedir() + "/.config/solana/id.json");
-  const keypair = anchor.web3.Keypair.fromSecretKey(Buffer.from(JSON.parse(keypairFile)));
-  const wallet = new anchor.Wallet(keypair);
+     const connection = new anchor.web3.Connection("http://127.0.0.1:8899", "confirmed");
+     const provider = new anchor.AnchorProvider(connection, wallet, { preflightCommitment: "confirmed", skipPreflight: true });
+     anchor.setProvider(provider);
 
-  const connection = new anchor.web3.Connection("http://127.0.0.1:8899", "confirmed");
-  const provider = new anchor.AnchorProvider(connection, wallet, { preflightCommitment: "confirmed", skipPreflight: true });
-  anchor.setProvider(provider);
+     const idl = require("../target/idl/test_fail.json");
+     idl.address = "YOUR_PROGRAM_ID"; // Use the Program ID printed by 'anchor deploy'
+     const program = new anchor.Program(idl, provider);
 
-  const idl = require("../target/idl/test_fail.json");
-  // Use the Program ID printed by 'anchor deploy'
-  idl.address = "YOUR_PROGRAM_ID";
-  const program = new anchor.Program(idl, provider);
+     const ix = await program.methods.triggerError(new anchor.BN(500)).instruction();
+     const tx = new anchor.web3.Transaction().add(ix);
+     
+     const signature = await provider.connection.sendTransaction(tx, [keypair], { skipPreflight: true });
+     console.log("TRANSACTION SIGNATURE: ", signature);
+   }
+   main();
+   ```
+   Run the script: `node tests/run_test.js`. Paste the signature into your UI.
 
-  const ix = await program.methods.triggerError(new anchor.BN(500)).instruction();
-  const tx = new anchor.web3.Transaction().add(ix);
-  
-  const signature = await provider.connection.sendTransaction(tx, [keypair], { skipPreflight: true });
-  console.log("TRANSACTION SIGNATURE: ", signature);
-}
-main();
-```
+---
 
-Run the script: `node tests/run_test.js`. 
-Copy the resulting **Transaction Signature**, paste it into the UI, and the debugger will instantly extract the DWARF symbols from the deployed binary on your local chain, map it to the exact line in `lib.rs`, and highlight the error in bright red!
+### 🌍 Method 2: Devnet Testing (For Team Collaboration)
+
+If you want to share a failing transaction hash with your colleagues on GitHub, you must deploy your test program to **Devnet**. Devnet binaries also retain DWARF symbols!
+
+1. **Fund your Devnet Wallet:**
+   Go to [faucet.solana.com](https://faucet.solana.com/) and request Devnet SOL for your local wallet address (`solana address`).
+
+2. **Automated Devnet Deployment Script:**
+   Create a bash script `deploy_and_test_devnet.sh` in your Anchor project:
+   ```bash
+   #!/bin/bash
+   echo "🚀 Preparing to deploy to Devnet..."
+   
+   echo "🔨 Building Anchor Project..."
+   anchor build
+
+   echo "🚢 Deploying to Devnet..."
+   anchor deploy --provider.cluster devnet
+
+   echo "💥 Executing failing transaction on Devnet..."
+   # Note: Ensure your run_test.js is updated to point to https://api.devnet.solana.com
+   node tests/run_test_devnet.js
+   ```
+
+3. **Devnet Test Script (`run_test_devnet.js`):**
+   ```javascript
+   const anchor = require("@coral-xyz/anchor");
+   const fs = require("fs");
+   const os = require("os");
+
+   async function main() {
+     const keypairFile = fs.readFileSync(os.homedir() + "/.config/solana/id.json");
+     const keypair = anchor.web3.Keypair.fromSecretKey(Buffer.from(JSON.parse(keypairFile)));
+     const wallet = new anchor.Wallet(keypair);
+
+     // 🌐 CONNECT TO DEVNET
+     const connection = new anchor.web3.Connection("https://api.devnet.solana.com", "confirmed");
+     const provider = new anchor.AnchorProvider(connection, wallet, { preflightCommitment: "confirmed", skipPreflight: true });
+     anchor.setProvider(provider);
+
+     const idl = require("../target/idl/test_fail.json");
+     idl.address = "YOUR_PROGRAM_ID";
+     const program = new anchor.Program(idl, provider);
+
+     const ix = await program.methods.triggerError(new anchor.BN(500)).instruction();
+     const tx = new anchor.web3.Transaction().add(ix);
+     
+     const signature = await provider.connection.sendTransaction(tx, [keypair], { skipPreflight: true });
+     console.log("DEVNET TRANSACTION SIGNATURE: ", signature);
+   }
+   main();
+   ```
+
+4. **Run it:**
+   ```bash
+   chmod +x deploy_and_test_devnet.sh
+   ./deploy_and_test_devnet.sh
+   ```
+
+You can now share the resulting **Devnet Transaction Signature** with your colleagues. When they run the debugger UI and enter that hash, it will automatically pull the Devnet binary, extract the DWARF symbols, search their local filesystem for the corresponding Rust project, and highlight the exact line of code!

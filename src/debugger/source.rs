@@ -90,6 +90,20 @@ impl SourceFetcher {
                 return Some(content);
             }
 
+            // Strategy 2.5: Check sibling directories (if workspace_root is solana-debugger, check other folders in dev/)
+            if let Some(parent) = Path::new(root).parent() {
+                if let Ok(entries) = std::fs::read_dir(parent) {
+                    for entry in entries.flatten() {
+                        if entry.path().is_dir() {
+                            let candidate = entry.path().join(file_path);
+                            if let Ok(content) = fs::read_to_string(&candidate) {
+                                return Some(content);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Strategy 3: Strip common build path prefixes
             // DWARF paths often contain build directory prefixes like:
             //   /home/user/.cargo/registry/src/.../src/lib.rs
