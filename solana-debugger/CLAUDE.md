@@ -23,6 +23,7 @@ There is no build step (`tsx` runs the `.ts` files directly), no lint script, an
 
 - **`fetch-tx.ts`** — entry point for `npm run fetch`. Fetches a `VersionedTransactionResponse`, then prints a series of sections (STATUS, RESOLVED ERROR, COMPUTE BUDGET, FEE, BALANCE DELTAS, TOKEN BALANCE DELTAS, LOG MESSAGES, TOP-LEVEL/INNER INSTRUCTIONS, ACCOUNT KEYS TOUCHED, RAW META). It's a linear script, not a library — new inspection sections get added inline in `main()`.
 - **`replay-tx.ts`** — entry point for `npm run replay`. Fetches the tx from mainnet, calls `surfnet_timeTravel` to fork the local surfnet validator to the tx's slot, rebuilds a `VersionedTransaction` with dummy 64-byte signatures (we don't have the signer's key), and calls `simulateTransaction` with `sigVerify: false` to compare the original error/compute-units against the replayed ones. It also snapshots every **writable** account before simulating and passes those same addresses as `accounts` in the simulate config, so the post-state comes back in the same response — then diffs the two.
+- **`lib/prestate.ts`** — `seedPreState()` writes the tx's recorded pre-execution balances back onto the fork via the `surfnet_setAccount` cheatcode, so the replay starts from the state the tx actually ran against. See "Fork fidelity" below — the ordering constraints here are load-bearing.
 - **`lib/accounts.ts`** — the state-diff layer. `snapshotFromAccountInfo()`/`snapshotFromSimulated()` normalize an RPC `AccountInfo` and a `SimulatedTransactionAccountInfo` (whose `data` is a `[base64, "base64"]` tuple) into one `AccountSnapshot`, where `null` means "does not exist". `diffAccount()` returns null when nothing changed, else reports lamports/owner/data-length changes, a changed-byte count with first offset for opaque program state, and a decoded token-balance delta. `decodeTokenAccount()` is deliberately strict — it checks the owning program and, past 165 bytes, the Token-2022 `account_type` tag, since a mis-decode would print a confident fake balance.
 - **`lib/decode.ts`** — `normalizeInstructions()` flattens legacy vs. v0 (versioned, with address-lookup-table support) transaction messages into one common `NormalizedIx[]` shape (`programId`, `accounts` with signer/writable flags, `dataBase64`). `decodeComputeBudgetIx()` decodes ComputeBudget111... instruction data by its first-byte discriminant.
 - **`lib/errors.ts`** — `resolveCustomError(connection, programId, code)` resolves a raw `Custom(n)` instruction error through a fallback chain, from strongest to weakest evidence, and returns `{ source, ... }` rather than ever guessing:
@@ -34,9 +35,22 @@ There is no build step (`tsx` runs the `.ts` files directly), no lint script, an
   `findFailingProgramInLogs(logs, code)` in the same module decides *which* program the code should be resolved against — see the CPI gotcha below.
 - **`lib/surfnet.ts`** — `surfnetCall(url, method, params)`, a thin JSON-RPC POST helper for surfnet-specific methods (e.g. `surfnet_timeTravel`) that aren't part of the standard Solana RPC and thus aren't on `@solana/web3.js`'s `Connection`.
 
+### Fork fidelity: why `lib/prestate.ts` exists
+
+Surfnet lazily pulls account state from mainnet as accounts are touched, and it pulls whatever mainnet holds *now* — historical state at a slot would need an archival RPC. So a replay of a tx from slot N starts from state that may be hours newer, and fails for reasons the original never hit (a since-drained token account reports "insufficient funds").
+
+`seedPreState()` fixes this from the tx's own metadata, which the validator recorded at execution time: `preBalances` gives every account's lamports, `preTokenBalances` gives token amounts. Both are written back with the `surfnet_setAccount` cheatcode before simulating. Two ordering rules matter:
+
+- **Read every account before seeding.** Reading is what triggers surfnet's lazy pull of the real mainnet account; seeding an untouched address first creates an empty System-owned shell that shadows it.
+- **Take the diff baseline after seeding**, or the diff measures the seeding rather than the transaction.
+
+Cheatcode details worth not rediscovering: `surfnet_setAccount(pubkey, update)` takes **hex** data (not base64), and partial updates **merge** — setting only `lamports` preserves data and owner. Token amounts are spliced into the existing account at offset 64 rather than rebuilt, so delegate/close-authority/Token-2022 extensions survive.
+
+What this does *not* restore is non-token program-owned data — oracle prices, open orders, a pool's internal accounting. Nothing records it. In practice AMM pool reserves are themselves SPL token accounts, so `preTokenBalances` covers them, which is why swap replays reproduce. Note that seeding **mutates the local fork**, by design.
+
 ### Gotcha: `surfnet_timeTravel` only moves forward
 
-A running surfnet's clock keeps advancing in real time, and `surfnet_timeTravel` refuses to go backwards (`Cannot travel to past slot: target=…, current=…`). So a surfnet that has been up for a while can no longer reach any historical tx — replaying one needs a **freshly started** surfpool forked at or below the target slot. `replay-tx.ts` treats a time-travel error as fatal on purpose: continuing would diff against present-day state and report differences that have nothing to do with the transaction.
+A running surfnet's clock keeps advancing in real time, and `surfnet_timeTravel` refuses to go backwards (`Cannot travel to past slot: target=…, current=…`). So a surfnet that has been up for a while can no longer reach any historical tx. `replay-tx.ts` warns and continues rather than failing, because `seedPreState()` restores the balances a replay actually depends on — both known test transactions reproduce exactly with a present-day clock. The residual risk is the Clock sysvar: a program checking a deadline or expiry will behave differently, and only a **freshly started** surfpool forked at or below the target slot fixes that.
 
 ### Gotcha: a failed simulation returns no post-state
 

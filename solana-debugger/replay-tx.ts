@@ -20,6 +20,7 @@ import {
   snapshotFromAccountInfo,
   snapshotFromSimulated,
 } from "./lib/accounts.js";
+import { seedPreState } from "./lib/prestate.js";
 import { surfnetCall } from "./lib/surfnet.js";
 
 const SURFNET_RPC = process.env.SURFNET_RPC ?? "http://127.0.0.1:8899";
@@ -59,14 +60,18 @@ async function replay(signature: string) {
   const travel = (await surfnetCall(SURFNET_RPC, "surfnet_timeTravel", [
     { absoluteSlot: tx.slot },
   ])) as { error?: { message?: string; data?: string } };
-  if (travel?.error) {
-    const detail = travel.error.data ?? travel.error.message ?? JSON.stringify(travel.error);
-    throw new Error(
-      `surfnet_timeTravel to slot ${tx.slot} failed: ${detail}\n` +
-        `  surfnet_timeTravel only moves forward, and a running surfnet's clock keeps\n` +
-        `  advancing, so a fork started after this tx's slot can never reach it.\n` +
-        `  Restart surfpool forked at or below slot ${tx.slot}, and check one is\n` +
-        `  actually listening at ${SURFNET_RPC}.`
+  // Not fatal: we seed the tx's recorded balances below, which is what most
+  // replays actually depend on. A stale clock still matters for programs with
+  // deadline/expiry checks, so say so rather than quietly carrying on.
+  const clockIsWrong = Boolean(travel?.error);
+  if (clockIsWrong) {
+    const detail = travel.error?.data ?? travel.error?.message ?? JSON.stringify(travel.error);
+    console.log(`\nwarning: could not fork to slot ${tx.slot}: ${detail}`);
+    console.log(
+      "  surfnet_timeTravel only moves forward and a running surfnet's clock keeps\n" +
+        "  advancing, so a fork started after this tx can never reach it. Balances are\n" +
+        "  seeded from the tx metadata below, but the Clock sysvar is present-day —\n" +
+        "  restart surfpool at or below this slot if the program checks deadlines."
     );
   }
 
@@ -90,7 +95,26 @@ async function replay(signature: string) {
     if (message.isAccountWritable(i)) writable.push(accountKeys.get(i)!);
   }
 
-  // Pre-state comes off the same fork the simulation will run against.
+  // Read every account first: that's what makes surfnet lazily pull the real
+  // mainnet state. Seeding an untouched address before this would shadow it
+  // with an empty System-owned shell.
+  const allKeys: PublicKey[] = [];
+  for (let i = 0; i < accountKeys.length; i++) allKeys.push(accountKeys.get(i)!);
+  const warmed = await getManyAccounts(surfnet, allKeys);
+
+  section("PRE-STATE SEED");
+  const seed = await seedPreState(SURFNET_RPC, tx, accountKeys, warmed);
+  console.log(
+    `restored ${seed.lamportsSet} lamport balance(s), ${seed.tokenAmountsSet} token amount(s)` +
+      (seed.tokenAccountsBuilt ? `, rebuilt ${seed.tokenAccountsBuilt} token account(s)` : "")
+  );
+  for (const s of seed.skipped) console.log(`  skipped ${s.pubkey}: ${s.reason}`);
+  console.log(
+    "  note: program-owned data (pool reserves, oracles, open orders) is not recorded\n" +
+      "  in tx metadata, so it stays at present-day fork values"
+  );
+
+  // Baseline for the diff, read *after* seeding: this is the true pre-state.
   const preInfos = await getManyAccounts(surfnet, writable);
 
   const sim = await surfnet.simulateTransaction(vtx, {
