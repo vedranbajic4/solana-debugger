@@ -2,16 +2,17 @@
  * fetch-tx.ts — fetch a transaction and print a decoded post-mortem.
  *
  * Usage:
- *   RPC_URL=https://mainnet.helius-rpc.com/?api-key=... npx tsx fetch-tx.ts <SIGNATURE>
+ *   npm run fetch <SIGNATURE> [--verbose]
  *
- * Requires:
- *   ./lib/decode.ts  — normalizeInstructions, decodeComputeBudgetIx
- *   ./lib/errors.ts  — resolveCustomError
+ * Prints a root-cause SUMMARY first — signature in, answer out — then the
+ * supporting detail. `--verbose` adds the raw meta dump, which is most of the
+ * output volume and useful mainly for diffing.
  */
 
 import { Connection, type VersionedTransactionResponse } from "@solana/web3.js";
 import { normalizeInstructions, decodeComputeBudgetIx } from "./lib/decode.js";
 import { resolveCustomError, findFailingProgramInLogs } from "./lib/errors.js";
+import { parseAnchorError, findLogHint } from "./lib/summary.js";
 
 const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
 
@@ -28,10 +29,15 @@ function section(title: string) {
   console.log(`\n=== ${title} ===`);
 }
 
+/** Pads a summary label so the values line up in a column. */
+const row = (label: string, value: string) => console.log(`  ${label.padEnd(11)} ${value}`);
+
 async function main() {
-  const signature = process.argv[2];
+  const args = process.argv.slice(2);
+  const verbose = args.includes("--verbose") || args.includes("-v");
+  const signature = args.find((a) => !a.startsWith("-"));
   if (!signature) {
-    console.error("usage: npx tsx fetch-tx.ts <SIGNATURE>");
+    console.error("usage: npm run fetch <SIGNATURE> [--verbose]");
     process.exit(1);
   }
 
@@ -67,59 +73,9 @@ async function main() {
 
   const instructions = normalizeInstructions(tx);
 
-  // ---------------------------------------------------------------- STATUS
-
-  section("STATUS");
-  if (meta.err) {
-    console.log(`FAILED: ${JSON.stringify(meta.err, bigintSafe)}`);
-  } else {
-    console.log("SUCCESS");
-  }
-  console.log(`slot: ${tx.slot}`);
-  console.log(`version: ${tx.version}`);
-  if (tx.blockTime) console.log(`blockTime: ${new Date(tx.blockTime * 1000).toISOString()}`);
-
-  // -------------------------------------------------------- RESOLVED ERROR
-
-  const err = meta.err as any;
-  if (err && typeof err === "object" && "InstructionError" in err) {
-    const [failedIxIndex, detail] = err.InstructionError as [number, any];
-    const failedIx = instructions[failedIxIndex];
-
-    section("RESOLVED ERROR");
-    console.log(`failing instruction: [${failedIxIndex}] ${failedIx?.programId ?? "<unknown>"}`);
-
-    if (detail && typeof detail === "object" && detail.Custom !== undefined) {
-      const code: number = detail.Custom;
-      console.log(`custom code: ${code} (0x${code.toString(16)})`);
-
-      // The index above names a top-level instruction; if the failure happened
-      // inside a CPI the culprit is deeper, and only the logs know which.
-      const fromLogs = findFailingProgramInLogs(meta.logMessages, code);
-      const culprit = fromLogs ?? failedIx?.programId;
-
-      if (fromLogs && failedIx && fromLogs !== failedIx.programId) {
-        console.log(`failing program: ${fromLogs}  (reached via CPI from ${failedIx.programId})`);
-      } else if (!fromLogs && failedIx) {
-        console.log(
-          "  note: no failure line in the logs (truncated or absent) — attributing the " +
-            "code to the top-level program, which is wrong if it failed inside a CPI"
-        );
-      }
-
-      if (culprit) {
-        const resolved = await resolveCustomError(connection, culprit, code);
-        console.log("resolution:", JSON.stringify(resolved, bigintSafe, 2));
-      }
-    } else {
-      // Non-custom runtime errors, e.g. "ProgramFailedToComplete", "MissingAccount"
-      console.log(`runtime error: ${JSON.stringify(detail, bigintSafe)}`);
-    }
-  }
-
-  // -------------------------------------------------------- COMPUTE BUDGET
-
-  section("COMPUTE BUDGET");
+  // ------------------------------------------------ GATHER (before printing)
+  // The summary comes first, so everything it needs is worked out up front and
+  // the detail sections below reuse these values rather than recomputing them.
 
   let requestedUnits: number | null = null;
   let priceMicroLamports: bigint | null = null;
@@ -133,12 +89,143 @@ async function main() {
   }
 
   const consumed = Number(meta.computeUnitsConsumed ?? 0);
-  console.log(
+  const computeText =
     requestedUnits !== null
-      ? `consumed: ${consumed} of ${requestedUnits} requested ` +
-          `(${((consumed / requestedUnits) * 100).toFixed(1)}%)`
-      : `consumed: ${consumed} (no explicit limit set — default applies)`
-  );
+      ? `${consumed} of ${requestedUnits} CU (${((consumed / requestedUnits) * 100).toFixed(1)}%)`
+      : `${consumed} CU (no explicit limit set — default applies)`;
+
+  const numSigners = message.header.numRequiredSignatures;
+
+  const err = meta.err as any;
+  const instructionError =
+    err && typeof err === "object" && "InstructionError" in err
+      ? (err.InstructionError as [number, any])
+      : null;
+  const failedIxIndex = instructionError ? instructionError[0] : null;
+  const detail = instructionError ? instructionError[1] : null;
+  const failedIx = failedIxIndex !== null ? instructions[failedIxIndex] : undefined;
+
+  const customCode: number | null =
+    detail && typeof detail === "object" && detail.Custom !== undefined ? detail.Custom : null;
+
+  // The InstructionError index names a *top-level* instruction; if the failure
+  // happened inside a CPI the culprit is deeper, and only the logs know which.
+  const fromLogs =
+    customCode !== null ? findFailingProgramInLogs(meta.logMessages, customCode) : null;
+  const culprit = fromLogs ?? failedIx?.programId ?? null;
+  const viaCpi = Boolean(fromLogs && failedIx && fromLogs !== failedIx.programId);
+
+  const resolved =
+    customCode !== null && culprit
+      ? await resolveCustomError(connection, culprit, customCode)
+      : null;
+
+  const anchor = parseAnchorError(meta.logMessages);
+  const logHint = findLogHint(meta.logMessages);
+
+  // --------------------------------------------------------------- SUMMARY
+
+  section("SUMMARY");
+
+  const when = tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : "unknown time";
+  console.log(`${meta.err ? "FAILED" : "SUCCESS"}  slot ${tx.slot}  ${when}`);
+
+  if (meta.err) {
+    if (failedIxIndex !== null) {
+      row("instruction", `[${failedIxIndex}] of ${instructions.length}`);
+    }
+    if (culprit) row("program", culprit);
+    if (viaCpi) row("", `via CPI from ${failedIx!.programId}`);
+
+    if (customCode !== null) {
+      const hex = `0x${customCode.toString(16)}`;
+      const name = resolved?.name ?? anchor?.code ?? null;
+      if (name) {
+        row("error", `${name}  (custom ${customCode} / ${hex}, via ${resolved?.source ?? "logs"})`);
+        const message = resolved?.msg ?? anchor?.message;
+        if (message && message !== name) row("message", message);
+      } else {
+        row("error", `custom ${customCode} (${hex}) — unresolved`);
+        // The note explains *why* it's unresolved; its leading "Custom error N
+        // from <program>" would just repeat the line above.
+        const why = resolved?.note?.split(" — ").pop();
+        if (why) row("note", why);
+      }
+    } else if (detail !== null) {
+      row("error", JSON.stringify(detail, bigintSafe));
+    } else {
+      row("error", JSON.stringify(meta.err, bigintSafe));
+    }
+
+    // The constraint/account and source line are what actually locate the bug.
+    if (anchor?.account) row("account", `${anchor.account}  (constraint that tripped)`);
+    if (anchor?.source) row("at", anchor.source);
+    if (!anchor && logHint) row("log", logHint);
+  } else {
+    row("instructions", `${instructions.length}`);
+  }
+
+  row("compute", computeText);
+  row("fee", sol(meta.fee));
+
+  if (!meta.err) {
+    const lamportMoves = meta.preBalances.filter(
+      (pre, i) => (meta.postBalances[i] ?? pre) !== pre
+    ).length;
+    const tokenMoves = (meta.postTokenBalances ?? []).filter((post) => {
+      const pre = (meta.preTokenBalances ?? []).find(
+        (b) => b.accountIndex === post.accountIndex
+      );
+      return (pre?.uiTokenAmount.amount ?? "0") !== post.uiTokenAmount.amount;
+    }).length;
+    row("moved", `${lamportMoves} lamport balance(s), ${tokenMoves} token balance(s)`);
+  }
+
+  if (!verbose) console.log("\n  (re-run with --verbose for the raw meta dump)");
+
+  // ---------------------------------------------------------------- STATUS
+
+  section("STATUS");
+  if (meta.err) {
+    console.log(`FAILED: ${JSON.stringify(meta.err, bigintSafe)}`);
+  } else {
+    console.log("SUCCESS");
+  }
+  console.log(`slot: ${tx.slot}`);
+  console.log(`version: ${tx.version}`);
+  if (tx.blockTime) console.log(`blockTime: ${when}`);
+
+  // -------------------------------------------------------- RESOLVED ERROR
+
+  if (instructionError) {
+    section("RESOLVED ERROR");
+    console.log(`failing instruction: [${failedIxIndex}] ${failedIx?.programId ?? "<unknown>"}`);
+
+    if (customCode !== null) {
+      console.log(`custom code: ${customCode} (0x${customCode.toString(16)})`);
+
+      if (viaCpi) {
+        console.log(`failing program: ${fromLogs}  (reached via CPI from ${failedIx!.programId})`);
+      } else if (!fromLogs && failedIx) {
+        console.log(
+          "  note: no failure line in the logs (truncated or absent) — attributing the " +
+            "code to the top-level program, which is wrong if it failed inside a CPI"
+        );
+      }
+
+      if (resolved) console.log("resolution:", JSON.stringify(resolved, bigintSafe, 2));
+    } else {
+      // Non-custom runtime errors, e.g. "ProgramFailedToComplete", "MissingAccount"
+      console.log(`runtime error: ${JSON.stringify(detail, bigintSafe)}`);
+    }
+
+    if (anchor) console.log("anchor log:", JSON.stringify(anchor, bigintSafe, 2));
+  }
+
+  // -------------------------------------------------------- COMPUTE BUDGET
+
+  section("COMPUTE BUDGET");
+  console.log(`consumed: ${computeText}`);
   if (priceMicroLamports !== null) {
     console.log(`priority price: ${priceMicroLamports} microLamports/CU`);
   }
@@ -147,7 +234,6 @@ async function main() {
 
   section("FEE");
 
-  const numSigners = message.header.numRequiredSignatures;
   const baseFee = numSigners * LAMPORTS_PER_SIGNATURE;
   const priorityFee = meta.fee - baseFee;
 
@@ -261,8 +347,10 @@ async function main() {
 
   // ------------------------------------------------------------------ RAW META
 
-  section("RAW META (for later diffing/decoding)");
-  console.log(JSON.stringify(meta, null, 2));
+  if (verbose) {
+    section("RAW META (for later diffing/decoding)");
+    console.log(JSON.stringify(meta, null, 2));
+  }
 }
 
 main().catch((e) => {

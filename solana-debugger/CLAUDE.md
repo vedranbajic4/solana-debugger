@@ -9,9 +9,12 @@ A small CLI toolkit for debugging Solana transactions: fetching a transaction fr
 ## Commands
 
 ```bash
-npm run fetch <SIGNATURE>    # tsx --env-file=.env fetch-tx.ts <SIGNATURE>
-npm run replay <SIGNATURE>   # tsx --env-file=.env replay-tx.ts <SIGNATURE>
+npm run fetch <SIGNATURE>               # decoded post-mortem, root-cause SUMMARY first
+npm run fetch <SIGNATURE> -- --verbose  # ...plus the raw meta dump (over half the output)
+npm run replay <SIGNATURE>              # replay against a local surfnet and diff state
 ```
+
+Note the `--` before `--verbose`: without it npm consumes the flag itself and the script never sees it.
 
 Both scripts load env vars from `.env` (see `.env.example`):
 - `RPC_URL` — mainnet/devnet RPC endpoint (required by both scripts).
@@ -21,7 +24,8 @@ There is no build step (`tsx` runs the `.ts` files directly), no lint script, an
 
 ## Architecture
 
-- **`fetch-tx.ts`** — entry point for `npm run fetch`. Fetches a `VersionedTransactionResponse`, then prints a series of sections (STATUS, RESOLVED ERROR, COMPUTE BUDGET, FEE, BALANCE DELTAS, TOKEN BALANCE DELTAS, LOG MESSAGES, TOP-LEVEL/INNER INSTRUCTIONS, ACCOUNT KEYS TOUCHED, RAW META). It's a linear script, not a library — new inspection sections get added inline in `main()`.
+- **`fetch-tx.ts`** — entry point for `npm run fetch`. Fetches a `VersionedTransactionResponse`, prints a root-cause **SUMMARY** first, then the supporting sections (STATUS, RESOLVED ERROR, COMPUTE BUDGET, FEE, BALANCE DELTAS, TOKEN BALANCE DELTAS, LOG MESSAGES, TOP-LEVEL/INNER INSTRUCTIONS, ACCOUNT KEYS TOUCHED, and RAW META only under `--verbose`). It's a linear script, not a library — new inspection sections get added inline in `main()`. Because the summary prints first, everything it needs is computed in one GATHER block before any output, and the sections below reuse those values instead of recomputing; keep that split when adding sections.
+- **`lib/summary.ts`** — log-derived context for the summary. `parseAnchorError()` pulls the source `file:line`, the offending account/constraint, and the human-readable message out of Anchor's one-line `AnchorError` log (it has several shapes — `thrown in …`, `caused by account: …`, bare `occurred` — so every field is independently optional). `findLogHint()` covers non-Anchor programs by returning the last thing a program actually logged before the first failure line, skipping runtime bookkeeping and Anchor's `Instruction: …` dispatch trace.
 - **`replay-tx.ts`** — entry point for `npm run replay`. Fetches the tx from mainnet, calls `surfnet_timeTravel` to fork the local surfnet validator to the tx's slot, rebuilds a `VersionedTransaction` with dummy 64-byte signatures (we don't have the signer's key), and calls `simulateTransaction` with `sigVerify: false` to compare the original error/compute-units against the replayed ones. It also snapshots every **writable** account before simulating and passes those same addresses as `accounts` in the simulate config, so the post-state comes back in the same response — then diffs the two.
 - **`lib/prestate.ts`** — `seedPreState()` writes the tx's recorded pre-execution balances back onto the fork via the `surfnet_setAccount` cheatcode, so the replay starts from the state the tx actually ran against. See "Fork fidelity" below — the ordering constraints here are load-bearing.
 - **`lib/accounts.ts`** — the state-diff layer. `snapshotFromAccountInfo()`/`snapshotFromSimulated()` normalize an RPC `AccountInfo` and a `SimulatedTransactionAccountInfo` (whose `data` is a `[base64, "base64"]` tuple) into one `AccountSnapshot`, where `null` means "does not exist". `diffAccount()` returns null when nothing changed, else reports lamports/owner/data-length changes, a changed-byte count with first offset for opaque program state, and a decoded token-balance delta. `decodeTokenAccount()` is deliberately strict — it checks the owning program and, past 165 bytes, the Token-2022 `account_type` tag, since a mis-decode would print a confident fake balance.
