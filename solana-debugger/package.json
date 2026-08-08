@@ -10,7 +10,8 @@
     "corpus": "tsx --env-file=.env build-corpus.ts",
     "test:archive": "tsx --env-file=.env test-archive.ts",
     "test:cpi": "tsx --env-file=.env test-cpi-tree.ts",
-    "test:report": "tsx --env-file=.env test-report.ts"
+    "test:report": "tsx --env-file=.env test-report.ts",
+    "test:decode": "tsx --env-file=.env test-decode.ts"
   },
   "keywords": [],
   "author": "",

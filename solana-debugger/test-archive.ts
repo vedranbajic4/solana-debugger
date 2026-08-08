@@ -10,10 +10,11 @@
  * rejecting `slot` together with `minContextSlot`, which is what `probeArchive`
  * uses to tell a real archive from an endpoint that ignores the parameter.
  *
- * The injection checks have to run against an account that exists on mainnet:
- * `surfnet_setAccount` reads the account from the remote before applying an
- * update and fails if it isn't there, so it can update but never create. The
- * test restores whatever it changed before exiting.
+ * The injection checks run against a real mainnet account so the test exercises
+ * the same path a replay does; it restores whatever it changed before exiting.
+ * (`surfnet_setAccount` can also create accounts outright — an early reading of
+ * this test claimed otherwise, but that was a transient RPC failure surfacing
+ * as `AccountNotFound`. The ghost-account check below pins the real behaviour.)
  */
 
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
@@ -174,10 +175,12 @@ async function main() {
     const program = await readAccount(surfnet, programAccount);
     check("left the executable account untouched", program === null);
 
-    // `surfnet_setAccount` can update but not create, so an account the archive
-    // has and mainnet no longer does is unrestorable. It must be reported, not
-    // thrown — one dead account shouldn't cost the whole replay.
-    console.log("\nunrestorable accounts (closed since the tx)");
+    // An account the archive has but present-day mainnet doesn't — a wSOL
+    // account closed in its own transaction, a PDA closed for rent. These are
+    // restorable: the cheatcode creates them. Whatever the outcome, injection
+    // must report rather than throw, since one bad account shouldn't cost the
+    // whole replay.
+    console.log("\naccounts closed since the tx");
     const ghost = new Map<string, ArchivedAccount>([
       [
         doesNotExistAnywhere,
@@ -185,8 +188,14 @@ async function main() {
       ],
     ]);
     const ghostReport = await injectHistoricalState(SURFNET_RPC, ghost, new Map());
-    check("reports the failure instead of throwing", ghostReport.failed.length === 1);
-    check("injected nothing", ghostReport.injected === 0);
+    check(
+      "restores an account that exists on no network",
+      ghostReport.injected === 1,
+      JSON.stringify(ghostReport.failed)
+    );
+    check("never throws, whatever happens", ghostReport.injected + ghostReport.failed.length === 1);
+    const restored = await readAccount(surfnet, doesNotExistAnywhere);
+    check("the restored account is readable on the fork", restored?.lamports === 5000);
   } finally {
     // Put back what we changed, so a verify run after this isn't measuring it.
     if (original) {

@@ -35,6 +35,8 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 | `lib/cpi-tree.ts` | logs → call tree, self-CU, deepest failed frame |
 | `lib/report.ts` | `DebugReport` — the conclusions as data |
 | `lib/errors.ts` | resolves `Custom(n)` through a fallback chain |
+| `lib/idl-cache.ts` | disk cache for on-chain IDL lookups, misses included |
+| `lib/native-decoders.ts` | System/Token/Token-2022/ATA instruction decoding |
 | `lib/summary.ts` | Anchor error and log-hint extraction |
 | `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
 | `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
@@ -43,7 +45,7 @@ Four directives that outlive any single file:
 
 - **Keep `fetch-tx.ts`'s two tiers honest.** Everything the summary needs is computed in one GATHER block before any output, so detail sections reuse those values rather than recomputing. Anything that changes how much to *trust* the summary — the CPI-attribution caveat, truncated logs — is a `warning` row in the summary, never only behind `--verbose`. A section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
 - **Keep `replay-tx.ts` a printer.** Logic that lands there is logic `verify-replay.ts` can't measure.
-- **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` — see the CPI gotcha below.
+- **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` (see the CPI gotcha below) and `decodeNativeIx()`, which returns null on an unrecognised discriminant — a confident "Transfer 5 SOL" that's wrong is worse than no answer. `.idl-cache/` is gitignored and disposable; `pruneIdlCache()` throws it away if a cached IDL ever goes stale.
 - **Keep `DebugReport` serializable.** No `bigint`/`Buffer`/`PublicKey`; u64 token amounts are decimal strings, because the report exists to survive JSON, disk, and a diff between runs.
 
 ### Fork fidelity: why `lib/prestate.ts` exists
@@ -59,7 +61,7 @@ Cheatcode details worth not rediscovering: `surfnet_setAccount(pubkey, update)` 
 
 Three more behaviours in `seedPreState()`, each of which fixed a real class of spurious replay failure:
 
-- **`lamports: 0` is unwritable.** Surfnet reads a zero balance as "this account is absent" and lazily re-pulls it from mainnet, silently undoing the seed (and any earlier seeding of that account). So zero pre-balances are skipped in the lamports pass.
+- **`lamports: 0` doesn't stick for a mainnet-backed account.** The write itself lands — the account goes absent — but absent is exactly what triggers surfnet's lazy pull, so the next read restores it from present-day mainnet, silently undoing the seed and any earlier seeding of that account. (It *does* stick for an account mainnet doesn't have: nothing to re-pull.) So zero pre-balances are skipped in the lamports pass.
 - **Accounts the tx *creates* have to be emptied first.** A zero pre-balance means the account didn't exist yet, but the fork pulls present-day mainnet where it does — created by this very transaction. The replay then dies on "already in use" before reaching anything interesting. Step 3 resets those to a bare System-owned shell. It can't be emptied all the way (see above), so the shell keeps one lamport: `Allocate`/`Assign` only require empty data and a System owner and replay correctly, while `CreateAccount` rejects any account holding lamports and still fails. Only accounts that *exist on the fork* are reset — creating a shell where the fork has nothing would break the replay rather than fix it.
 - **Rebuilt wrapped-SOL accounts need `is_native`.** A wSOL account is usually closed in the same tx that opens it, so by replay time mainnet has none to copy and `buildTokenAccount()` synthesises one. Without the `is_native` flag (`COption<u64>` at offset 109, holding the rent-exempt reserve) the Token program rejects `SyncNative` with "Instruction does not support non-native tokens". It's asserted on the splice path too, since the account on the fork may be one an earlier replay in the same session rebuilt without it.
 
@@ -80,11 +82,19 @@ Two design points that are load-bearing:
 
 Executable accounts are skipped: overwriting a loaded program's account with a data blob breaks the fork's loader for no benefit. Pinning programs at a historical version is a separate problem.
 
-### Gotcha: `surfnet_setAccount` can update an account but never create one
+### Gotcha: `surfnet_setAccount` reports a failed *remote fetch* as `AccountNotFound`
 
-It reads the account from the remote before applying the update and fails with `AccountNotFound` if mainnet doesn't have it. So **an account that existed at the tx's slot but has been closed since cannot be restored at all** — not by seeding, not by archive injection. This is the normal fate of a wSOL account (opened and closed in one tx) and of any PDA closed for rent.
+The cheatcode consults the remote before applying an update. When that request fails — rate limiting, a flaky endpoint, a hammered RPC during a long `verify` run — the error surfaced is:
 
-Both paths therefore record the failure and carry on rather than throwing: one dead account shouldn't cost the whole replay. Preserve that — a thrown error here turns a mostly-good replay into no replay.
+```
+AccountNotFound: pubkey=<addr>: error sending request for url (https://…)
+```
+
+which reads like "this account doesn't exist and cannot be created". It isn't. **`surfnet_setAccount` creates accounts that exist on no network perfectly well** (verified directly: three fresh keypair addresses, created and read back). The `error sending request for url` tail is the tell — a genuine absence doesn't need to send a request anywhere.
+
+This matters because it inverts a design conclusion. Accounts closed since the transaction — the normal fate of a wSOL account, or any PDA closed for rent — **are** restorable, by both `seedPreState()`'s rebuild path and archive injection. Don't build around a limit that isn't there.
+
+Both paths still record the failure and carry on rather than throwing, which remains right: transient RPC errors are exactly the kind of thing that shouldn't cost a whole replay. Preserve that.
 
 ### Gotcha: `surfnet_timeTravel` only moves forward, and the clock lags wall time
 

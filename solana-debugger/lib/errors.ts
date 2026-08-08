@@ -13,6 +13,7 @@ import {
   ANCHOR_USER_ERROR_OFFSET,
   isAnchorFrameworkRange,
 } from "./anchor-errors.js";
+import { getCachedIdl } from "./idl-cache.js";
 import { KNOWN_PROGRAM_ERRORS, PROGRAM_NAMES } from "./program-errors.js";
 
 export type ResolvedError = {
@@ -86,11 +87,22 @@ export async function resolveCustomError(
 ): Promise<ResolvedError> {
   const hex = "0x" + code.toString(16);
 
-  // 1. Program's own IDL — strongest evidence, program-specific.
-  const idl = await tryFetchAnchorIdl(connection, programId);
-  const entry = idl?.errors?.find((e: any) => e.code === code);
+  // 1. Program's own IDL — strongest evidence, program-specific. Cached,
+  //    including the misses: most programs have no on-chain IDL, so an
+  //    uncached lookup pays a round-trip every time to learn nothing.
+  const idl = (await getCachedIdl(connection, programId, tryFetchAnchorIdl)) as {
+    errors?: { code: number; name: string; msg?: string }[];
+  } | null;
+  const entry = idl?.errors?.find((e) => e.code === code);
   if (entry) {
-    return { source: "anchor-idl", name: entry.name, msg: entry.msg, hex };
+    // `msg` is optional in the IDL schema, and under exactOptionalPropertyTypes
+    // an explicit `undefined` is not the same as an absent key.
+    return {
+      source: "anchor-idl",
+      name: entry.name,
+      hex,
+      ...(entry.msg === undefined ? {} : { msg: entry.msg }),
+    };
   }
 
   // 2. Exact program-ID match in our tables — also program-specific.

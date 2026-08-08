@@ -27,6 +27,7 @@ import type { Connection, VersionedTransactionResponse } from "@solana/web3.js";
 import { buildCpiTree, deepestFailedFrame, framesBySelfCu, type CpiTree } from "./cpi-tree.js";
 import { decodeComputeBudgetIx, normalizeInstructions } from "./decode.js";
 import { findFailingProgramInLogs, resolveCustomError, type ResolvedError } from "./errors.js";
+import { decodeNativeIx, type DecodedIx } from "./native-decoders.js";
 import { findLogHint, parseAnchorError, type AnchorErrorInfo } from "./summary.js";
 
 const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
@@ -112,7 +113,18 @@ export type DebugReport = {
     writable: boolean;
     fromLookupTable: boolean;
   }[];
-  instructions: { index: number; programId: string; accountCount: number; failed: boolean }[];
+  instructions: {
+    index: number;
+    programId: string;
+    accountCount: number;
+    failed: boolean;
+    /**
+     * Present for System/Token/Token-2022/ATA. Those four have no on-chain IDL
+     * and appear in nearly every transaction, so hand-decoding is the only way
+     * to say what the instruction did. null means "not decoded", never "no-op".
+     */
+    decoded: DecodedIx | null;
+  }[];
   /**
    * Caveats that change how much to trust the rest. A renderer must surface
    * these wherever it surfaces conclusions — they are the difference between a
@@ -319,6 +331,11 @@ export async function buildDebugReport(
       programId: ix.programId,
       accountCount: ix.accounts.length,
       failed: index === instructionIndex,
+      decoded: decodeNativeIx(
+        ix.programId,
+        ix.dataBase64,
+        ix.accounts.map((a) => a.pubkey)
+      ),
     })),
     warnings,
   };

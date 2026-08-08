@@ -11,8 +11,10 @@
     refuses endpoints that silently ignore the param and return present-day
     state. Path is covered by npm run test:archive against a mock.
     BLOCKED on a real archive endpoint to measure the match-rate gain.
-    Known limit: surfnet_setAccount can update but not create, so accounts
-    closed since the tx are unrestorable either way.
+    (An earlier note here claimed surfnet_setAccount cannot create accounts,
+    so closed accounts were unrestorable. That was wrong — it was a transient
+    RPC failure surfacing as AccountNotFound. Creation works; accounts closed
+    since the tx ARE restorable by both seeding and archive injection.)
 [ ] program pinning at historical slot
     BLOCKED, twice: needs the program's bytecode at the tx's slot (same missing
     archive endpoint as item 2), and writing executable accounts onto the fork
@@ -27,14 +29,25 @@
 [x] self-CU attribution + deepest-failed-frame
     selfCu = consumed - children; deepestFailedFrame() agrees with
     findFailingProgramInLogs on every corpus tx that has a failure line.
-[ ] ALT resolution for v0 txs
-[ ] IDL fetch (on-chain PDA + zlib inflate)
-[ ] IDL cache + negative cache
-[ ] native program decoders (System/Token/T22/ATA)
+[x] ALT resolution for v0 txs
+    Already done: normalizeInstructions() resolves meta.loadedAddresses.
+[x] IDL fetch (on-chain PDA + zlib inflate)
+    Already done: tryFetchAnchorIdl() in lib/errors.ts.
+[x] IDL cache + negative cache
+    lib/idl-cache.ts, disk-backed under .idl-cache/ (gitignored) so it survives
+    between CLI invocations. Asymmetric TTLs: hits 7d, misses 1h, since a miss
+    is only true until someone uploads an IDL. Measured on the corpus: 8 cached
+    programs, 6 of them confirmed absences — the negative cache carries most of
+    the benefit, as expected.
+[x] native program decoders (System/Token/T22/ATA)
+    lib/native-decoders.ts, surfaced on DebugReport.instructions[].decoded.
+    Decodes 104/104 native instructions across the corpus with no unrecognised
+    discriminants. Unknown discriminant returns null rather than a guess.
 [ ] instruction arg decoder (discriminator + borsh)
 [ ] account struct decoder
 [ ] error tables: TransactionError / InstructionError / Anchor ranges
-[ ] IDL 6000+ error lookup
+[x] IDL 6000+ error lookup
+    Already done: resolveCustomError() matches idl.errors by code.
 [ ] pre/post account snapshot + field-level diff
 [ ] rule engine scaffold
 [ ] first 8 rules

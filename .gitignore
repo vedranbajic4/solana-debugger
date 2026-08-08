@@ -75,3 +75,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
+
+# Cached on-chain Anchor IDLs (lib/idl-cache.ts) — regenerable, machine-local
+solana-debugger/.idl-cache/

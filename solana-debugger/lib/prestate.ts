@@ -183,14 +183,15 @@ export async function seedPreState(
         });
         report.tokenAccountsBuilt++;
       } catch (e) {
-        // `surfnet_setAccount` reads the account from mainnet before applying an
-        // update and fails if it isn't there, so it cannot *create* one. A token
-        // account closed since the transaction — the normal fate of a wSOL
-        // account — is therefore unrestorable. Record it and seed what we can;
+        // Rebuilding normally works even for an account closed since the tx —
+        // the cheatcode can create one. This catch is for the transient case:
+        // surfnet consults the remote first, and a failed request surfaces as
+        // `AccountNotFound: … error sending request for url (…)`, which is a
+        // flaky RPC rather than a real absence. Record it and seed what we can;
         // aborting here would throw away the rest of a usable replay.
         report.skipped.push({
           pubkey,
-          reason: `closed since the tx and surfnet cannot recreate it: ${(e as Error).message}`,
+          reason: `could not rebuild (often a transient RPC failure): ${(e as Error).message}`,
         });
       }
     })
