@@ -2,8 +2,41 @@ import { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { TransactionInput } from './components/TransactionInput';
 import { MetricsHeader } from './components/MetricsHeader';
+import { AnchorAnalysisCard } from './components/AnchorAnalysisCard';
 import { BytecodeViewer } from './components/BytecodeViewer';
 import { AlertCircle, Cpu } from 'lucide-react';
+
+export interface DecodedError {
+  code: number;
+  hexCode: string;
+  name: string;
+  msg: string;
+}
+
+export interface DecodedInstruction {
+  programId: string;
+  programLabel?: string;
+  name: string;
+  discriminatorHex: string;
+  decodedArgs?: string | null;
+  dataHex: string;
+}
+
+export interface AccountValidation {
+  programId: string;
+  errorName: string;
+  message: string;
+}
+
+export interface AnalysisSummary {
+  signature: string;
+  slot: number;
+  executionStatus: string;
+  computeUnits?: number;
+  decodedError?: DecodedError | null;
+  decodedInstructions: DecodedInstruction[];
+  accountValidations: AccountValidation[];
+}
 
 export interface ChunkData {
   success: boolean;
@@ -11,6 +44,7 @@ export interface ChunkData {
   chunk: string;
   chunkLines: string[];
   vmLogs: string;
+  analysisSummary?: AnalysisSummary | null;
   page: number;
   totalPages: number;
   chunkSize: number;
@@ -152,6 +186,9 @@ export function App() {
         {/* Status Metrics */}
         <MetricsHeader signature={signature} metrics={chunkData?.metrics} />
 
+        {/* High-Level Decoded Anchor Analysis Card */}
+        <AnchorAnalysisCard analysisSummary={chunkData?.analysisSummary} />
+
         {/* Main Code & Disassembly Viewer */}
         <BytecodeViewer
           bytecodeText={chunkData?.chunk || ''}
@@ -172,7 +209,7 @@ export function App() {
             <Cpu className="w-4 h-4 text-solana-green" />
             <span>Solana Debugger & SBF Tracer Engine (Agave / solana-sdk)</span>
           </div>
-          <div>Bytecode Iterator Pattern Enabled • ~100 Lines per Chunk</div>
+          <div>Bytecode Iterator & Anchor IDL Decoder Active</div>
         </div>
       </footer>
     </div>

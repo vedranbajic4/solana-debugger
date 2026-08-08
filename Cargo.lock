@@ -3469,8 +3469,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dirs",
+ "flate2",
  "gimli",
  "object",
+ "serde",
  "serde_json",
  "solana-client",
  "solana-sdk",

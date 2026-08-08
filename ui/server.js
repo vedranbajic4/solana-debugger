@@ -67,6 +67,8 @@ app.post('/api/analyze', async (req, res) => {
   const targetSig = signature ? signature.trim() : '';
 
   const bytecodeFilePath = path.join(rootDir, 'bytecode.txt');
+  const analysisJsonPath = path.join(rootDir, 'bytecode.json');
+
   const parsedPage = Math.max(1, parseInt(page) || 1);
   const parsedChunkSize = Math.max(10, Math.min(2000, parseInt(chunkSize) || 100));
 
@@ -76,6 +78,14 @@ app.post('/api/analyze', async (req, res) => {
     try {
       const bytecodeContent = await fs.readFile(bytecodeFilePath, 'utf-8');
       const { metrics, vmLogs, disassemblyText } = parseBytecodeFile(bytecodeContent);
+
+      let analysisSummary = null;
+      try {
+        const jsonContent = await fs.readFile(analysisJsonPath, 'utf-8');
+        analysisSummary = JSON.parse(jsonContent);
+      } catch {
+        // Fallback if bytecode.json not present
+      }
 
       const lines = disassemblyText ? disassemblyText.split('\n') : [];
       const totalLines = lines.length;
@@ -93,6 +103,7 @@ app.post('/api/analyze', async (req, res) => {
         chunk: chunkText,
         chunkLines,
         vmLogs,
+        analysisSummary,
         page: currentPage,
         totalPages,
         chunkSize: parsedChunkSize,
