@@ -5,10 +5,13 @@ if [ -z "$SO_FILE" ] || [ -z "$OUT_FILE" ]; then
     echo "Usage: $0 <so_file> <out_c_file>"
     exit 1
 fi
-GHIDRA_DIR=/home/vedran/ghidra_12.1.2_PUBLIC
-SCRIPTS_DIR=/home/vedran/dev/solana-debugger/scripts
+
+GHIDRA_DIR=${GHIDRA_DIR:-/home/vedran/ghidra_12.1.2_PUBLIC}
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
 # Create a unique project name
 PROJ_NAME="GhidraProj_$$"
+
 # Run headless analyzer
 $GHIDRA_DIR/support/analyzeHeadless /tmp $PROJ_NAME \
     -import "$SO_FILE" \

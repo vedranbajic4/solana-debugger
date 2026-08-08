@@ -1,0 +1,22 @@
+{
+  "name": "program-examples",
+  "version": "1.0.0",
+  "description": "Solana program (smart contract) examples for Anchor, Pinocchio, and Native Rust.",
+  "scripts": {
+    "sync-package-json": "ts-node scripts/sync-package-json.ts",
+    "format": "prettier --write .",
+    "check": "prettier --check ."
+  },
+  "packageManager": "pnpm@10.33.0",
+  "keywords": [],
+  "author": "Solana Foundation",
+  "license": "MIT",
+  "devDependencies": {
+    "@solana/prettier-config-solana": "^0.0.7",
+    "@types/node": "^20.9.0",
+    "picocolors": "^1.0.0",
+    "prettier": "^3.9.6",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
