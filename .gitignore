@@ -1,0 +1,28 @@
+# Rust build artifacts
+target/
+
+# Node.js dependencies & builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Generated debugger logs & bytecode outputs
+bytecode.txt
+*.log
+
+# Solana test ledger & config
+/test-ledger/
+/config/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Backup files & scripts
+**/*.rs.bk
+**/cargo-*-bpf-child-script-*.sh
+
+solana-tx/node_modules/
