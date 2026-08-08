@@ -3,9 +3,9 @@
 
 import {
   Connection,
-  ParsedTransactionWithMeta,
-  ParsedInstruction,
-  PartiallyDecodedInstruction,
+  type ParsedTransactionWithMeta,
+  type ParsedInstruction,
+  type PartiallyDecodedInstruction,
 } from "@solana/web3.js";
 
 function isParsedInstruction(
