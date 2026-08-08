@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background-color: #0b0c10;
+    color: #f1f5f9;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom Design Utility Classes */
+.bg-solana-dark {
+  background-color: #0b0c10;
+}
+
+.bg-solana-card {
+  background-color: #12141c;
+}
+
+.border-solana-border {
+  border-color: #232733;
+}
+
+.text-solana-purple {
+  color: #9945FF;
+}
+
+.bg-solana-purple {
+  background-color: #9945FF;
+}
+
+.text-solana-green {
+  color: #14F195;
+}
+
+.bg-solana-green {
+  background-color: #14F195;
+}
+
+.text-solana-muted {
+  color: #808a9d;
+}
+
+.glass-panel {
+  background: rgba(18, 20, 28, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid #232733;
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(153, 69, 255, 0.25);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0c10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #232733;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4254;
+}
