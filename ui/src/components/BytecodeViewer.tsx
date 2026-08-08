@@ -13,6 +13,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Cpu,
+  FileCode,
 } from 'lucide-react';
 import type { ChunkData } from '../App';
 
@@ -96,45 +98,35 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
     }
   };
 
-  // Helper to colorize individual SBF assembly line safely
-  const formatSbfLine = (line: string | undefined | null, index: number) => {
-    if (!line) return <div key={index} className="h-2" />;
-
-    if (line.startsWith('📍 PROGRAM ID:')) {
-      return (
-        <div key={index} className="py-2 px-3 my-2 bg-solana-purple/20 border border-solana-purple/40 rounded-lg text-solana-green font-bold flex items-center space-x-2">
-          <span>{line}</span>
-        </div>
-      );
+  const renderAssemblyInstruction = (asmText: string) => {
+    const trimmed = asmText.trim();
+    if (trimmed.startsWith('if')) {
+      return <span className="text-amber-400 font-semibold">{trimmed}</span>;
     }
-    if (line.startsWith('===') || line.startsWith('---')) {
-      return <div key={index} className="text-solana-border my-1 select-none">{line}</div>;
+    if (trimmed.startsWith('call')) {
+      return <span className="text-blue-400 font-bold">{trimmed}</span>;
     }
-    if (line.startsWith('PC (Idx)')) {
-      return <div key={index} className="text-solana-muted font-bold py-1 border-b border-solana-border/50">{line}</div>;
+    if (trimmed.startsWith('exit') || trimmed.startsWith('return')) {
+      return <span className="text-rose-400 font-bold">{trimmed}</span>;
     }
-
-    if (line.startsWith('PC [')) {
-      const parts = line.split('|');
-      const pcPart = parts[0] || '';
-      const hexPart = parts[1] || '';
-      const asmPart = parts[2] || '';
-      const dwarfPart = parts[3] || '';
-
-      return (
-        <div key={index} className="py-0.5 hover:bg-solana-card/60 rounded px-1 flex items-center font-mono text-xs transition-colors">
-          <span className="text-solana-purple font-semibold w-24 flex-shrink-0">{pcPart.trim()}</span>
-          <span className="text-slate-500 w-2 shrink-0">|</span>
-          <span className="text-cyan-400/80 w-52 flex-shrink-0 px-2 truncate">{hexPart.trim()}</span>
-          <span className="text-slate-500 w-2 shrink-0">|</span>
-          <span className="text-solana-green font-medium w-56 flex-shrink-0 px-2 truncate">{asmPart.trim()}</span>
-          <span className="text-slate-500 w-2 shrink-0">|</span>
-          <span className="text-amber-400/90 pl-2 truncate flex-1">{dwarfPart.trim()}</span>
-        </div>
-      );
+    if (trimmed.startsWith('jmp') || trimmed.startsWith('goto')) {
+      return <span className="text-cyan-400 font-semibold">{trimmed}</span>;
     }
+    return <span className="text-solana-green font-medium">{trimmed}</span>;
+  };
 
-    return <div key={index} className="text-slate-300 py-0.5">{line}</div>;
+  const renderDwarfMapping = (dwarfText: string) => {
+    const trimmed = dwarfText.trim();
+    if (!trimmed || trimmed === 'no_dwarf_symbol') {
+      return <span className="text-slate-600 font-mono text-[11px] select-none">—</span>;
+    }
+    const cleanPath = trimmed.replace(/^📍\s*/, '');
+    return (
+      <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono">
+        <FileCode className="w-3 h-3 text-amber-400 shrink-0" />
+        <span className="truncate">{cleanPath}</span>
+      </span>
+    );
   };
 
   const vmLogLines = vmLogs ? vmLogs.split('\n') : [];
@@ -156,7 +148,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
               </span>
             </div>
 
-            <button className="text-solana-muted hover:text-white flex items-center space-x-1 font-mono text-xs">
+            <button className="text-solana-muted hover:text-white flex items-center space-x-1 font-mono text-xs cursor-pointer">
               <span>{showLogs ? 'Hide Logs' : 'Show Logs'}</span>
               {showLogs ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -179,7 +171,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
         </div>
       )}
 
-      {/* CHUNKED SBF DISASSEMBLY STREAM PANEL */}
+      {/* CHUNKED SBF DISASSEMBLY STREAM TABLE PANEL */}
       <div className="glass-panel rounded-2xl overflow-hidden border border-solana-border shadow-2xl">
         {/* Header Action Bar */}
         <div className="bg-solana-dark/90 px-6 py-3 border-b border-solana-border flex flex-wrap items-center justify-between gap-4">
@@ -307,11 +299,83 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
           </div>
         )}
 
-        {/* Code Display Area */}
-        <div className="max-h-[650px] overflow-auto font-mono text-xs p-5 bg-[#0e1017]">
-          <div className="space-y-0.5">
-            {filteredLines.map((line, idx) => formatSbfLine(line, idx))}
-          </div>
+        {/* Structured HTML Table Display Area */}
+        <div className="max-h-[650px] overflow-auto font-mono text-xs bg-[#0e1017]">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 bg-[#12141d] z-10 shadow-md border-b border-[#1c1f2b] text-solana-muted text-[11px] uppercase tracking-wider">
+              <tr>
+                <th className="py-3 px-4 w-32 shrink-0">PC (Idx)</th>
+                <th className="py-3 px-4 w-60 shrink-0">Raw Bytes (Hex)</th>
+                <th className="py-3 px-4 min-w-[280px]">Disassembled Assembly</th>
+                <th className="py-3 px-4">Mapped Source Line (DWARF)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#181b26]">
+              {filteredLines.map((line, idx) => {
+                if (!line) return null;
+
+                // Handle Program Banner line
+                if (line.startsWith('📍 PROGRAM ID:')) {
+                  return (
+                    <tr key={idx} className="bg-[#13101c] border-y border-[#262035]">
+                      <td colSpan={4} className="py-3 px-4 font-bold text-solana-green">
+                        <div className="flex items-center space-x-2">
+                          <Cpu className="w-4 h-4 text-solana-purple" />
+                          <span>{line}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // Skip ASCII decoration headers since we have a sticky table header
+                if (
+                  line.startsWith('===') ||
+                  line.startsWith('---') ||
+                  line.startsWith('PC (Idx)')
+                ) {
+                  return null;
+                }
+
+                // Parse PC assembly lines
+                if (line.startsWith('PC [')) {
+                  const parts = line.split('|');
+                  const pcPart = (parts[0] || '').trim();
+                  const hexPart = (parts[1] || '').trim();
+                  const asmPart = (parts[2] || '').trim();
+                  const dwarfPart = (parts[3] || '').trim();
+
+                  return (
+                    <tr key={idx} className="hover:bg-[#141722] transition-colors group">
+                      <td className="py-2 px-4 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded bg-solana-purple/20 border border-solana-purple/40 text-solana-purple font-semibold text-[11px]">
+                          {pcPart}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap text-cyan-400/90 font-mono tracking-wider text-[11px]">
+                        {hexPart}
+                      </td>
+                      <td className="py-2 px-4 font-mono text-[12px]">
+                        {renderAssemblyInstruction(asmPart)}
+                      </td>
+                      <td className="py-2 px-4 font-mono text-[11px]">
+                        {renderDwarfMapping(dwarfPart)}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // Default text row for any unparsed metadata line
+                return (
+                  <tr key={idx} className="hover:bg-solana-card/40 transition-colors text-slate-300">
+                    <td colSpan={4} className="py-2 px-4">
+                      {line}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
