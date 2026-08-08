@@ -36,6 +36,7 @@ import type { BorshValue } from "./borsh.js";
 import { decodeIdlInstruction, type AnchorIdl, type DecodedIdlIx } from "./idl-decode.js";
 import { getCachedIdl } from "./idl-cache.js";
 import { decodeNativeIx, type DecodedIx } from "./native-decoders.js";
+import { explainRuntimeError } from "./runtime-errors.js";
 import { findLogHint, parseAnchorError, type AnchorErrorInfo } from "./summary.js";
 
 const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
@@ -60,6 +61,12 @@ export type ReportedError = {
   instructionIndex: number | null;
   /** Non-custom runtime errors (`ProgramFailedToComplete`, …) land here. */
   runtimeError: string | null;
+  /**
+   * What that runtime error means, and what usually causes it. Null when the
+   * failure was a `Custom(n)` code (`resolved` covers those) or when the
+   * identifier isn't one we have an entry for.
+   */
+  runtimeExplanation: { name: string; meaning: string; cause: string | null } | null;
   customCode: number | null;
   hex: string | null;
   resolved: ResolvedError | null;
@@ -226,6 +233,20 @@ export async function buildDebugReport(
   const runtimeError =
     detail !== null && typeof detail === "string" ? detail : null;
 
+  // A failure can be shaped as an InstructionError payload or as a bare
+  // transaction-level error; explain whichever this is.
+  const explained = instructionError
+    ? explainRuntimeError(detail, "instruction")
+    : explainRuntimeError(rawErr, "transaction");
+  const runtimeExplanation =
+    explained?.info && customCode === null
+      ? {
+          name: explained.name,
+          meaning: explained.info.meaning,
+          cause: explained.info.cause ?? null,
+        }
+      : null;
+
   let error: ReportedError | null = null;
   if (rawErr) {
     const topLevelProgram =
@@ -262,6 +283,7 @@ export async function buildDebugReport(
       raw: meta.err,
       instructionIndex,
       runtimeError,
+      runtimeExplanation,
       customCode,
       hex: customCode === null ? null : `0x${customCode.toString(16)}`,
       resolved:
@@ -431,9 +453,13 @@ export function headline(report: DebugReport): string {
   const what =
     e.resolved?.name ??
     e.anchor?.code ??
+    e.runtimeExplanation?.name ??
     e.runtimeError ??
     (e.hex ? `custom ${e.customCode} (${e.hex})` : "unknown error");
-  return `FAILED  ${who}  ${what}`;
+  // The cause is the actionable half — "ran out of compute units" beats
+  // "ComputationalBudgetExceeded" for anyone who doesn't already know the enum.
+  const why = e.runtimeExplanation ? `  — ${e.runtimeExplanation.meaning}` : "";
+  return `FAILED  ${who}  ${what}${why}`;
 }
 
 /** The frame that actually raised the error, if the logs showed one. */

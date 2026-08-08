@@ -54,10 +54,21 @@
     decodeIdlAccount() in lib/idl-decode.ts, by account discriminator, with
     the 0.30+ layout-in-`types` indirection handled. Not yet consumed by the
     account diff — that's item 15's field-level half.
-[ ] error tables: TransactionError / InstructionError / Anchor ranges
+[x] error tables: TransactionError / InstructionError / Anchor ranges
+    lib/runtime-errors.ts — 38 transaction + 53 instruction entries, 26 with a
+    practical cause, surfaced as DebugReport.error.runtimeExplanation and in
+    headline(). Anchor ranges already existed in lib/anchor-errors.ts.
+    Coverage is checked against recent mainnet BLOCKS, not the corpus: the
+    corpus selects for token movement and CPIs, so all 12 of its failures are
+    custom errors and it exercises these tables not at all.
 [x] IDL 6000+ error lookup
     Already done: resolveCustomError() matches idl.errors by code.
-[ ] pre/post account snapshot + field-level diff
+[x] pre/post account snapshot + field-level diff
+    Snapshot/diff already existed in lib/accounts.ts; lib/field-diff.ts adds the
+    field-level half, decoding both sides with the owning program's IDL so
+    "412 bytes changed at offset 8" becomes named field deltas. Wired into the
+    replay path. Cross-checks itself: if bytes moved but no field differs, the
+    layout is wrong and it says so rather than reporting a confident nothing.
 [ ] rule engine scaffold
 [ ] first 8 rules
 [ ] counterfactual battery (CU / balance / time / account)

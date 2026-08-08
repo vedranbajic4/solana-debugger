@@ -39,6 +39,10 @@ import {
   type ArchiveProbe,
   type InjectionReport,
 } from "./archive.js";
+import { diffAccountFields } from "./field-diff.js";
+import { getCachedIdl } from "./idl-cache.js";
+import { tryFetchAnchorIdl } from "./errors.js";
+import type { AnchorIdl } from "./idl-decode.js";
 import { findDurableNonce, seedNonceAccount, type DurableNonceInfo } from "./nonce.js";
 import { seedPreState, type SeedReport } from "./prestate.js";
 import { surfnetCall } from "./surfnet.js";
@@ -225,17 +229,31 @@ export async function replayTransaction(opts: {
   }
 
   const postInfos = sim.value.accounts as (SimulatedTransactionAccountInfo | null)[] | null;
-  const diffs = postInfos
-    ? writable
-        .map((key, i) =>
-          diffAccount(
-            key.toBase58(),
-            snapshotFromAccountInfo(preSnapshots[i] ?? null),
-            snapshotFromSimulated(postInfos[i])
-          )
-        )
-        .filter((d): d is AccountDiff => d !== null)
-    : null;
+  let diffs: AccountDiff[] | null = null;
+  if (postInfos) {
+    diffs = [];
+    for (let i = 0; i < writable.length; i++) {
+      const pre = snapshotFromAccountInfo(preSnapshots[i] ?? null);
+      const post = snapshotFromSimulated(postInfos[i]);
+      const diff = diffAccount(writable[i]!.toBase58(), pre, post);
+      if (!diff) continue;
+
+      // Opaque program state is where the byte count is least useful, so that's
+      // exactly where the IDL is worth fetching. Token accounts already decode
+      // in `diffAccount`, and an owner change means the layout moved out from
+      // under us — skip both.
+      if (diff.bytesChanged && !diff.token && !diff.owner && pre && post) {
+        const idl = (await getCachedIdl(
+          mainnet,
+          pre.owner,
+          tryFetchAnchorIdl
+        )) as AnchorIdl | null;
+        const fields = diffAccountFields(idl, pre.owner, pre.data, post.data, diff.bytesChanged);
+        if (fields) diff.fields = fields;
+      }
+      diffs.push(diff);
+    }
+  }
 
   return {
     signature,

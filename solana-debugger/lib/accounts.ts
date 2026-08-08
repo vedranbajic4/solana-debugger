@@ -16,6 +16,7 @@ import type {
   SimulatedTransactionAccountInfo,
 } from "@solana/web3.js";
 
+import { formatFieldDiff, type FieldDiff } from "./field-diff.js";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "./program-errors.js";
 
 /** Account state at one instant. `null` means the account does not exist. */
@@ -103,6 +104,12 @@ export type AccountDiff = {
     pre: bigint;
     post: bigint;
   } | null;
+  /**
+   * Named field changes, when the owning program's IDL could describe the
+   * account. Attached after the fact by the replay pipeline, which is what has
+   * a connection to fetch an IDL with — see `lib/field-diff.ts`.
+   */
+  fields?: FieldDiff;
 };
 
 /** Returns null when nothing about the account changed. */
@@ -220,10 +227,13 @@ export function formatAccountDiff(d: AccountDiff): string[] {
   if (d.owner) out.push(`      owner ${d.owner.pre} -> ${d.owner.post}`);
   if (d.dataLen) out.push(`      data length ${d.dataLen.pre} -> ${d.dataLen.post} bytes`);
   if (d.bytesChanged) {
+    // Named fields are the answer the byte count is a stand-in for, so when
+    // they exist the count becomes a one-line footnote rather than the finding.
+    const noDecoder = d.token || d.fields ? "" : " (no decoder for this account type)";
     out.push(
-      `      data ${d.bytesChanged} byte(s) changed, first at offset ${d.firstChangedOffset}` +
-        (d.token ? "" : " (no decoder for this account type)")
+      `      data ${d.bytesChanged} byte(s) changed, first at offset ${d.firstChangedOffset}${noDecoder}`
     );
+    if (d.fields) out.push(...formatFieldDiff(d.fields));
   }
   return out;
 }

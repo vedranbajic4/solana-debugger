@@ -12,7 +12,8 @@ The script list is in `package.json`; env vars are documented in `.env.example`.
 
 - **Flags need `--` first, or npm eats them**: `npm run fetch <SIG> -- --verbose`, `npm run verify -- --only failed`, `-- --limit 5`, `-- --json`. Without it the script never sees the flag.
 - **`npm run replay` and `npm run verify` need a surfnet running locally** (`SURFNET_RPC`, default `http://127.0.0.1:8899`). Nothing starts one for you.
-- **`npm run verify` is the closest thing to a test suite** — and the number that says whether anything else here means anything. See "Verifying the replay" below. The `test:*` scripts cover narrower pieces; `test:cpi` and `test:report` take `--live`/`--all` to run against the corpus instead of fixtures.
+- **`npm run verify` is the closest thing to a test suite** — and the number that says whether anything else here means anything. See "Verifying the replay" below. The `test:*` scripts cover narrower pieces and take `--live`/`--all` to run against real chain data instead of fixtures. Run them that way before trusting a decoder: fixtures only prove the code does what I assumed, and every real bug in these decoders so far was found by the live pass, not the fixtures.
+- **`npm run test:errors -- --live` samples mainnet blocks, not the corpus.** The corpus selects for token movement and CPIs, which skews it entirely to custom program errors — it exercises `lib/runtime-errors.ts` not at all.
 - **`ARCHIVE_RPC` unset is a supported configuration**, not a degraded one that needs apologising for in the code.
 
 There is no build step — `tsx` runs the `.ts` files directly — and no lint script.
@@ -39,6 +40,8 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 | `lib/native-decoders.ts` | System/Token/Token-2022/ATA instruction decoding |
 | `lib/borsh.ts` | borsh reader driven by IDL type descriptions |
 | `lib/idl-decode.ts` | IDL-driven instruction args and account structs |
+| `lib/runtime-errors.ts` | what the non-custom runtime errors mean, and cause |
+| `lib/field-diff.ts` | named field changes from an IDL, not a byte count |
 | `lib/summary.ts` | Anchor error and log-hint extraction |
 | `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
 | `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
@@ -49,6 +52,7 @@ Four directives that outlive any single file:
 - **Keep `replay-tx.ts` a printer.** Logic that lands there is logic `verify-replay.ts` can't measure.
 - **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` (see the CPI gotcha below) and `decodeNativeIx()`, which returns null on an unrecognised discriminant — a confident "Transfer 5 SOL" that's wrong is worse than no answer. `.idl-cache/` is gitignored and disposable; `pruneIdlCache()` throws it away if a cached IDL ever goes stale.
 - **Keep `DebugReport` serializable.** No `bigint`/`Buffer`/`PublicKey`; u64 token amounts are decimal strings, because the report exists to survive JSON, disk, and a diff between runs.
+- **Let a decoder contradict itself out loud.** `diffAccountFields()` cross-checks against the byte count and reports "bytes changed but no field differs" rather than a confident empty diff; `lib/borsh.ts` stops at the first thing it can't read instead of skipping a field and misaligning everything after. Both would be easy to "clean up" into silence — don't.
 
 ### Fork fidelity: why `lib/prestate.ts` exists
 
