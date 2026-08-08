@@ -15,3 +15,5 @@ serde_json = "1.0"
 object = "0.36"
 gimli = "0.31"
 flate2 = "1.0"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+url = "2.5"

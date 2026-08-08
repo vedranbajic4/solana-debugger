@@ -19,7 +19,8 @@ mod debugger;
 
 use debugger::{
     AccountValidationSummary, AnchorDecoder, AnalysisSummary,
-    DecodedInstructionSummary, DwarfLineMapper, SbfDisassembler, SourceLocation,
+    DecodedInstructionSummary, DwarfLineMapper, FailureContext, SbfDisassembler,
+    SourceFetcher, SourceLocation, SourceLocationInfo,
 };
 
 fn get_rpc_client(sig_str: &str) -> RpcClient {
@@ -90,6 +91,8 @@ fn main() -> Result<()> {
         decoded_error: None,
         decoded_instructions: Vec::new(),
         account_validations: Vec::new(),
+        failure_context: None,
+        source_context: None,
     };
 
     let mut logs: Vec<String> = Vec::new();
@@ -132,6 +135,85 @@ fn main() -> Result<()> {
                 message: log.clone(),
             });
         }
+    }
+
+    // Extract failure context from VM logs for failed transactions
+    if analysis.execution_status.contains("FAILED") {
+        let failed_program_id = AnchorDecoder::extract_failed_program_from_logs(&logs);
+
+        // Extract instruction index from error pattern in logs
+        let failed_instruction_index = logs.iter().rev().find_map(|log| {
+            // Pattern: "Program ... failed: ..."
+            if log.contains("failed:") {
+                // The instruction index can be inferred from the log ordering
+                // For now extract from TransactionError if available
+                None
+            } else {
+                None
+            }
+        });
+
+        let mut failure_ctx = FailureContext {
+            failed_program_id: failed_program_id.clone(),
+            failed_instruction_index: failed_instruction_index,
+            source_location: None,
+        };
+
+        // If we have a failed program, try to fetch its ELF and extract DWARF source location
+        if let Some(ref pid_str) = failed_program_id {
+            if let Ok(pid) = Pubkey::from_str(pid_str) {
+                if let Ok(account) = rpc_client.get_account(&pid) {
+                    if account.data.len() > 4 && &account.data[0..4] == b"\x7fELF" {
+                        let dwarf = DwarfLineMapper::parse_elf(&account.data)
+                            .unwrap_or_else(|_| DwarfLineMapper::new());
+
+                        if dwarf.mappings_count() > 0 {
+                            // Find the last mapped PC (approximate error location)
+                            // In a real VM stepper, we'd have the exact PC
+                            if let Some(loc) = dwarf.lookup_pc(u64::MAX) {
+                                failure_ctx.source_location = Some(SourceLocationInfo {
+                                    file: loc.file_path.clone(),
+                                    line: loc.line,
+                                    column: loc.column,
+                                });
+
+                                // Try to fetch actual source code from local disk
+                                let workspace_root = env::current_dir()
+                                    .ok()
+                                    .map(|p| p.to_string_lossy().to_string());
+                                let source_ctx = SourceFetcher::fetch_source_context(
+                                    &loc.file_path,
+                                    loc.line,
+                                    workspace_root.as_deref(),
+                                    Some(pid_str),
+                                );
+                                analysis.source_context = Some(source_ctx);
+                            }
+                        } else {
+                            // No DWARF debug info — program is a stripped release build
+                            analysis.source_context = Some(debugger::SourceContext {
+                                available: false,
+                                file_name: None,
+                                error_line: None,
+                                source_lines: Vec::new(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ensure source_context is populated so the UI knows to show the "Not Found" banner
+        if analysis.source_context.is_none() {
+            analysis.source_context = Some(debugger::SourceContext {
+                available: false,
+                file_name: None,
+                error_line: None,
+                source_lines: Vec::new(),
+            });
+        }
+
+        analysis.failure_context = Some(failure_ctx);
     }
 
     // Write PRISTINE SBF Bytecode Disassembly File (bytecode.txt)
@@ -283,18 +365,7 @@ fn main() -> Result<()> {
         let dwarf_mapper = if !is_native {
             DwarfLineMapper::parse_elf(&elf_bytes).unwrap_or_else(|_| DwarfLineMapper::new())
         } else {
-            let mut m = DwarfLineMapper::new();
-            for pc in 0..20 {
-                m.insert(
-                    pc as u64,
-                    SourceLocation {
-                        file_path: format!("{}/src/processor.rs", pid),
-                        line: (10 + pc * 2) as u64,
-                        column: 5,
-                    },
-                );
-            }
-            m
+            DwarfLineMapper::new()
         };
 
         let instructions = if !is_native {
