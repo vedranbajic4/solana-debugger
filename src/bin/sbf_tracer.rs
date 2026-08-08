@@ -5,7 +5,9 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 use solana_transaction_status::option_serializer::OptionSerializer;
-use solana_transaction_status::{EncodedTransaction, UiInstruction, UiMessage, UiParsedInstruction, UiTransactionEncoding};
+use solana_transaction_status::{
+    EncodedTransaction, UiInstruction, UiMessage, UiParsedInstruction, UiTransactionEncoding,
+};
 use std::collections::HashSet;
 use std::env;
 use std::fs::File;
@@ -15,10 +17,17 @@ use std::str::FromStr;
 #[path = "../debugger/mod.rs"]
 mod debugger;
 
-use debugger::{DwarfLineMapper, SbfDisassembler, SourceLocation};
+use debugger::{
+    AccountValidationSummary, AnchorDecoder, AnalysisSummary,
+    DecodedInstructionSummary, DwarfLineMapper, FailureContext, SbfDisassembler,
+    SourceFetcher, SourceLocation, SourceLocationInfo,
+};
 
 fn get_rpc_client(sig_str: &str) -> RpcClient {
-    let local_rpc = RpcClient::new_with_commitment("http://127.0.0.1:8899".to_string(), CommitmentConfig::confirmed());
+    let local_rpc = RpcClient::new_with_commitment(
+        "http://127.0.0.1:8899".to_string(),
+        CommitmentConfig::confirmed(),
+    );
     if !sig_str.is_empty() {
         if let Ok(sig) = Signature::from_str(sig_str) {
             let config = RpcTransactionConfig {
@@ -29,10 +38,24 @@ fn get_rpc_client(sig_str: &str) -> RpcClient {
             if local_rpc.get_transaction_with_config(&sig, config).is_ok() {
                 return local_rpc;
             }
+            let devnet_rpc = RpcClient::new_with_commitment(
+                "https://api.devnet.solana.com".to_string(),
+                CommitmentConfig::confirmed(),
+            );
+            if devnet_rpc.get_transaction_with_config(&sig, config).is_ok() {
+                return devnet_rpc;
+            }
         }
-        return RpcClient::new_with_commitment("https://api.mainnet-beta.solana.com".to_string(), CommitmentConfig::confirmed());
+        return RpcClient::new_with_commitment(
+            "https://api.mainnet-beta.solana.com".to_string(),
+            CommitmentConfig::confirmed(),
+        );
     }
     local_rpc
+}
+
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
 }
 
 fn main() -> Result<()> {
@@ -50,8 +73,12 @@ fn main() -> Result<()> {
     println!("🔎 Fetching Transaction: {}", target_sig);
     let rpc_client = get_rpc_client(&target_sig);
 
-    let sig = Signature::from_str(&target_sig)
-        .map_err(|_| anyhow!("Invalid Transaction Signature: '{}' (must be 88-character base58 string).", target_sig))?;
+    let sig = Signature::from_str(&target_sig).map_err(|_| {
+        anyhow!(
+            "Invalid Transaction Signature: '{}' (must be 88-character base58 string).",
+            target_sig
+        )
+    })?;
 
     let config = RpcTransactionConfig {
         encoding: Some(UiTransactionEncoding::JsonParsed),
@@ -59,9 +86,201 @@ fn main() -> Result<()> {
         max_supported_transaction_version: Some(0),
     };
 
-    let tx_meta = rpc_client.get_transaction_with_config(&sig, config)
-        .context("Failed to fetch transaction from RPC cluster")?;
+    let tx_meta_result = rpc_client.get_transaction_with_config(&sig, config);
+    let tx_meta = match tx_meta_result {
+        Ok(meta) => meta,
+        Err(e) => {
+            println!("❌ Transaction not found on any network (Localhost, Devnet, Mainnet).");
+            println!("   RPC Error: {}", e);
+            let dummy_analysis = AnalysisSummary {
+                signature: target_sig.clone(),
+                slot: 0,
+                execution_status: "NOT FOUND ❌".to_string(),
+                compute_units: None,
+                decoded_error: None,
+                decoded_instructions: Vec::new(),
+                account_validations: Vec::new(),
+                failure_context: None,
+                source_context: None,
+            };
+            let out_json = output_filename.replace(".txt", ".json");
+            if let Ok(file) = File::create(&out_json) {
+                let _ = serde_json::to_writer_pretty(file, &dummy_analysis);
+            }
+            if let Ok(mut file) = File::create(output_filename) {
+                let _ = writeln!(file, "Transaction not found on any network.");
+            }
+            return Ok(());
+        }
+    };
 
+        let raw_err = if let Some(meta) = tx_meta.transaction.meta.as_ref() {
+            format!("{:?}", meta.err)
+        } else {
+            "None".to_string()
+        };
+        println!("🚨 Raw Error from Bank: {}", raw_err);
+        
+        let mut analysis = AnalysisSummary {
+        signature: target_sig.clone(),
+        slot: tx_meta.slot,
+        execution_status: "SUCCESS ✅".to_string(),
+        compute_units: None,
+        decoded_error: None,
+        decoded_instructions: Vec::new(),
+        account_validations: Vec::new(),
+        failure_context: None,
+        source_context: None,
+    };
+
+    let mut logs: Vec<String> = Vec::new();
+
+    if let Some(ref meta) = tx_meta.transaction.meta {
+        if meta.err.is_some() {
+            analysis.execution_status = "FAILED ❌".to_string();
+        }
+        if let OptionSerializer::Some(cu) = meta.compute_units_consumed {
+            analysis.compute_units = Some(cu);
+        }
+        if let OptionSerializer::Some(ref log_msgs) = meta.log_messages {
+            logs = log_msgs.clone();
+        }
+    }
+
+    // High-Level Anchor Error Extraction
+    if analysis.execution_status.contains("FAILED") {
+        if let Some(err_code) = AnchorDecoder::extract_error_code_from_logs(&logs) {
+            let decoded_err = AnchorDecoder::decode_error(err_code, None);
+            println!("🚨 Decoded Error: {} ({})", decoded_err.name, decoded_err.hex_code);
+            analysis.decoded_error = Some(decoded_err);
+        }
+    }
+
+    // Account validation issues extraction from logs
+    for log in &logs {
+        if log.contains("AnchorError") || log.contains("Constraint") || log.contains("AccountNot") {
+            analysis.account_validations.push(AccountValidationSummary {
+                program_id: "AnchorFramework".to_string(),
+                error_name: if log.contains("ConstraintMut") {
+                    "ConstraintMut".to_string()
+                } else if log.contains("ConstraintSigner") {
+                    "ConstraintSigner".to_string()
+                } else if log.contains("ConstraintSeeds") {
+                    "ConstraintSeeds".to_string()
+                } else {
+                    "AccountValidationError".to_string()
+                },
+                message: log.clone(),
+            });
+        }
+    }
+
+    // Extract failure context from VM logs for failed transactions
+    if analysis.execution_status.contains("FAILED") {
+        let failed_program_id = AnchorDecoder::extract_failed_program_from_logs(&logs);
+
+        // Extract instruction index from error pattern in logs
+        let failed_instruction_index = logs.iter().rev().find_map(|log| {
+            // Pattern: "Program ... failed: ..."
+            if log.contains("failed:") {
+                // The instruction index can be inferred from the log ordering
+                // For now extract from TransactionError if available
+                None
+            } else {
+                None
+            }
+        });
+
+        let mut failure_ctx = FailureContext {
+            failed_program_id: failed_program_id.clone(),
+            failed_instruction_index: failed_instruction_index,
+            source_location: None,
+        };
+
+        // Fallback: Anchor prints exact file and line in logs! Let's extract it.
+        for log in &logs {
+            if log.contains("AnchorError thrown in ") {
+                if let Some(pos) = log.find("AnchorError thrown in ") {
+                    let rest = &log[pos + "AnchorError thrown in ".len()..];
+                    if let Some(end) = rest.find(". ") {
+                        let file_and_line = &rest[..end];
+                        let parts: Vec<&str> = file_and_line.split(':').collect();
+                        if parts.len() >= 2 {
+                            if let Ok(line_num) = parts[parts.len()-1].parse::<u64>() {
+                                let file_path = parts[0..parts.len()-1].join(":");
+                                println!("✅ EXTRACTED LOC FROM LOG: {} line {}", file_path, line_num);
+                                failure_ctx.source_location = Some(SourceLocationInfo {
+                                    file: file_path,
+                                    line: line_num,
+                                    column: 0,
+                                });
+                            } else {
+                                println!("❌ FAILED TO PARSE LINE NUM: {}", parts[parts.len()-1]);
+                            }
+                        } else {
+                            println!("❌ FAILED TO SPLIT FILE_AND_LINE: {}", file_and_line);
+                        }
+                    }
+                }
+            }
+        }
+
+        // If we have a failed program, try to fetch its ELF and extract DWARF source location
+        if let Some(ref pid_str) = failed_program_id {
+            if let Ok(pid) = Pubkey::from_str(pid_str) {
+                if let Ok(account) = rpc_client.get_account(&pid) {
+                    if account.data.len() > 4 && &account.data[0..4] == b"\x7fELF" {
+                        let dwarf = DwarfLineMapper::parse_elf(&account.data)
+                            .unwrap_or_else(|_| DwarfLineMapper::new());
+
+                        if dwarf.mappings_count() > 0 {
+                            // Find the last mapped PC (approximate error location)
+                            // In a real VM stepper, we'd have the exact PC
+                            if failure_ctx.source_location.is_none() {
+                                if let Some(loc) = dwarf.lookup_pc(u64::MAX) {
+                                    failure_ctx.source_location = Some(SourceLocationInfo {
+                                        file: loc.file_path.clone(),
+                                        line: loc.line,
+                                        column: loc.column,
+                                    });
+                                }
+                            }
+                        } else {
+                            // No DWARF debug info — program is a stripped release build
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(ref loc) = failure_ctx.source_location {
+            // Try to fetch actual source code from local disk
+            let workspace_root = env::current_dir()
+                .ok()
+                .map(|p| p.to_string_lossy().to_string());
+            let source_ctx = SourceFetcher::fetch_source_context(
+                &loc.file,
+                loc.line,
+                workspace_root.as_deref(),
+                failed_program_id.as_deref(),
+            );
+            analysis.source_context = Some(source_ctx);
+        }
+
+        // Ensure source_context is populated so the UI knows to show the "Not Found" banner
+        if analysis.source_context.is_none() {
+            analysis.source_context = Some(debugger::SourceContext {
+                available: false,
+                file_name: None,
+                error_line: None,
+                source_lines: Vec::new(),
+            });
+        }
+
+        analysis.failure_context = Some(failure_ctx);
+    }
+
+    // Write PRISTINE SBF Bytecode Disassembly File (bytecode.txt)
     let mut out_file = File::create(output_filename)
         .context(format!("Failed to create output file '{}'", output_filename))?;
 
@@ -70,21 +289,19 @@ fn main() -> Result<()> {
     writeln!(out_file, "==================================================================================================")?;
     writeln!(out_file, "Transaction Signature: {}", target_sig)?;
     writeln!(out_file, "Slot:                  {}", tx_meta.slot)?;
+    writeln!(out_file, "Execution Status:      {}", analysis.execution_status)?;
+    if let Some(cu) = analysis.compute_units {
+        writeln!(out_file, "Compute Units Consumed: {} CU", cu)?;
+    }
 
-    if let Some(ref meta) = tx_meta.transaction.meta {
-        writeln!(out_file, "Execution Status:      {}", if meta.err.is_none() { "SUCCESS ✅" } else { "FAILED ❌" })?;
-        if let OptionSerializer::Some(cu) = meta.compute_units_consumed {
-            writeln!(out_file, "Compute Units Consumed: {} CU", cu)?;
-        }
-        if let OptionSerializer::Some(ref logs) = meta.log_messages {
-            writeln!(out_file, "\n--- 📜 VM EXECUTION LOGS ---")?;
-            for (idx, log) in logs.iter().enumerate() {
-                writeln!(out_file, "[{:02}] {}", idx + 1, log)?;
-            }
+    if !logs.is_empty() {
+        writeln!(out_file, "\n--- 📜 VM EXECUTION LOGS ---")?;
+        for (idx, log) in logs.iter().enumerate() {
+            writeln!(out_file, "[{:02}] {}", idx + 1, log)?;
         }
     }
 
-    // Extract all invoked Program IDs
+    // Extract all invoked Program IDs & Decode High-Level Instructions
     let mut program_ids = HashSet::new();
     if let EncodedTransaction::Json(ui_tx) = &tx_meta.transaction.transaction {
         if let UiMessage::Parsed(parsed_msg) = &ui_tx.message {
@@ -101,11 +318,62 @@ fn main() -> Result<()> {
                         UiParsedInstruction::Parsed(p) => {
                             if let Ok(pid) = Pubkey::from_str(&p.program_id) {
                                 program_ids.insert(pid);
+
+                                let program_label = AnchorDecoder::get_program_label(&p.program_id);
+                                let ix_name = p
+                                    .parsed
+                                    .get("type")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| p.program.clone());
+
+                                let decoded_args = p.parsed.get("info").map(|info| {
+                                    if let Some(obj) = info.as_object() {
+                                        obj.iter()
+                                            .map(|(k, v)| format!("{}: {}", k, v))
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    } else {
+                                        info.to_string()
+                                    }
+                                });
+
+                                analysis.decoded_instructions.push(DecodedInstructionSummary {
+                                    program_id: p.program_id.clone(),
+                                    program_label,
+                                    name: ix_name,
+                                    discriminator_hex: "".to_string(),
+                                    decoded_args,
+                                    data_hex: "".to_string(),
+                                });
                             }
                         }
                         UiParsedInstruction::PartiallyDecoded(pd) => {
                             if let Ok(pid) = Pubkey::from_str(&pd.program_id) {
                                 program_ids.insert(pid);
+
+                                let raw_bytes = solana_sdk::bs58::decode(&pd.data).into_vec().unwrap_or_default();
+                                let disc_hex = if raw_bytes.len() >= 8 {
+                                    bytes_to_hex(&raw_bytes[0..8])
+                                } else {
+                                    "".to_string()
+                                };
+
+                                let idl = AnchorDecoder::fetch_idl(&rpc_client, &pid);
+                                let (program_label, ix_name, decoded_args) = AnchorDecoder::decode_known_instruction(
+                                    &pid.to_string(),
+                                    &raw_bytes,
+                                    idl.as_ref(),
+                                );
+
+                                analysis.decoded_instructions.push(DecodedInstructionSummary {
+                                    program_id: pid.to_string(),
+                                    program_label,
+                                    name: ix_name,
+                                    discriminator_hex: disc_hex,
+                                    decoded_args,
+                                    data_hex: bytes_to_hex(&raw_bytes),
+                                });
                             }
                         }
                     },
@@ -121,7 +389,7 @@ fn main() -> Result<()> {
     for pid in program_ids {
         writeln!(out_file, "\n📍 PROGRAM ID: {}", pid)?;
         let fetched_account = rpc_client.get_account(&pid).ok();
-        
+
         let is_elf = fetched_account
             .as_ref()
             .map(|a| a.data.len() > 4 && &a.data[0..4] == b"\x7fELF")
@@ -161,36 +429,56 @@ fn main() -> Result<()> {
         let dwarf_mapper = if !is_native {
             DwarfLineMapper::parse_elf(&elf_bytes).unwrap_or_else(|_| DwarfLineMapper::new())
         } else {
-            let mut m = DwarfLineMapper::new();
-            for pc in 0..20 {
-                m.insert(pc as u64, SourceLocation {
-                    file_path: format!("{}/src/processor.rs", pid),
-                    line: (10 + pc * 2) as u64,
-                    column: 5,
-                });
-            }
-            m
+            DwarfLineMapper::new()
         };
 
         let instructions = if !is_native {
-            SbfDisassembler::disassemble_elf(&elf_bytes).unwrap_or_else(|_| SbfDisassembler::disassemble_code(&elf_bytes).unwrap())
+            SbfDisassembler::disassemble_elf(&elf_bytes)
+                .unwrap_or_else(|_| SbfDisassembler::disassemble_code(&elf_bytes).unwrap())
         } else {
             SbfDisassembler::disassemble_code(&elf_bytes)?
         };
 
-        writeln!(out_file, "{:<8} | {:<23} | {:<25} | {}", "PC (Idx)", "Raw Bytes", "Disassembled Assembly", "Mapped Source Line")?;
-        writeln!(out_file, "--------------------------------------------------------------------------------------------------")?;
+        writeln!(
+            out_file,
+            "{:<8} | {:<23} | {:<25} | {}",
+            "PC (Idx)", "Raw Bytes", "Disassembled Assembly", "Mapped Source Line"
+        )?;
+        writeln!(
+            out_file,
+            "--------------------------------------------------------------------------------------------------"
+        )?;
 
         for inst in &instructions {
-            let hex_bytes = inst.raw_bytes.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" ");
-            let loc_str = dwarf_mapper.lookup_pc(inst.pc as u64)
+            let hex_bytes = inst
+                .raw_bytes
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+            let loc_str = dwarf_mapper
+                .lookup_pc(inst.pc as u64)
                 .map(|l| format!("📍 {}:L{}", l.file_path, l.line))
                 .unwrap_or_else(|| "no_dwarf_symbol".to_string());
 
-            writeln!(out_file, "PC [{:04}] | {:<23} | {:<25} | {}", inst.pc, hex_bytes, inst.assembly, loc_str)?;
+            writeln!(
+                out_file,
+                "PC [{:04}] | {:<23} | {:<25} | {}",
+                inst.pc, hex_bytes, inst.assembly, loc_str
+            )?;
         }
     }
 
-    println!("✅ Clean SBF Bytecode disassembly saved to: '{}'", output_filename);
+    // Save Separate High-Level Anchor Analysis File (analysis.json)
+    let analysis_filename = if output_filename.ends_with(".txt") {
+        output_filename.replace(".txt", ".json")
+    } else {
+        format!("{}.json", output_filename)
+    };
+    let analysis_json = serde_json::to_string_pretty(&analysis)?;
+    std::fs::write(&analysis_filename, analysis_json)?;
+
+    println!("✅ Pristine SBF Bytecode disassembly saved to: '{}'", output_filename);
+    println!("✅ High-level Anchor analysis summary saved to: '{}'", analysis_filename);
     Ok(())
 }

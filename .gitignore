@@ -9,6 +9,8 @@ dist/
 
 # Generated debugger logs & bytecode outputs
 bytecode.txt
+./bytecode.txt
+
 *.log
 
 # Solana test ledger & config

@@ -1,34 +1,23 @@
 import React from 'react';
-import { Search, Play, Zap, FileCode } from 'lucide-react';
+import { Search, Play, Zap, RotateCcw, X } from 'lucide-react';
 
 interface TransactionInputProps {
   signature: string;
   setSignature: (sig: string) => void;
   onAnalyze: () => void;
+  onClear: () => void;
   isLoading: boolean;
+  hasData?: boolean;
 }
 
 export const TransactionInput: React.FC<TransactionInputProps> = ({
   signature,
   setSignature,
   onAnalyze,
+  onClear,
   isLoading,
+  hasData,
 }) => {
-  const PRESET_SIGNATURES = [
-    {
-      label: 'Mainnet Swap Tx (Raydium/Pump.fun)',
-      hash: '3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQFnTnHnjmazFEgf65ZnJpZQvFLhDe9m38AA7D45D',
-    },
-    {
-      label: 'Mainnet SOL Transfer Tx',
-      hash: '2uNZE2u11kZvwubGKoKV6PwJRd8jDBiTtYceCoSzyAMD6pMzoUJraRCyWakiBJ9bma8vjM7dK2S1pQtGxxT6Ddk',
-    },
-    {
-      label: 'Live Localnet Re-Execution',
-      hash: '',
-    },
-  ];
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
       onAnalyze();
@@ -51,48 +40,51 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
               value={signature}
               onChange={(e) => setSignature(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="e.g. 3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQFnTnHnjmazFEgf65ZnJpZQvFLhDe9m38AA7D45D"
-              className="w-full pl-12 pr-4 py-3.5 bg-solana-dark border border-solana-border rounded-xl text-sm font-mono text-white placeholder-solana-muted focus:outline-none focus:border-solana-purple focus:ring-1 focus:ring-solana-purple transition-all"
+              placeholder="Paste Solana transaction signature hash..."
+              className="w-full pl-12 pr-10 py-3.5 bg-solana-dark border border-solana-border rounded-xl text-sm font-mono text-white placeholder-solana-muted focus:outline-none focus:border-solana-purple focus:ring-1 focus:ring-solana-purple transition-all"
             />
+            {signature && (
+              <button
+                type="button"
+                onClick={onClear}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-solana-muted hover:text-white hover:bg-solana-card rounded-lg transition-all"
+                title="Clear input"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <button
-            onClick={onAnalyze}
-            disabled={isLoading}
-            className="px-6 py-3.5 bg-gradient-to-r from-solana-purple to-purple-700 hover:from-purple-600 hover:to-solana-purple text-white font-semibold rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-solana-purple/20 transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5 fill-current" />
-                <span>Run Tracer</span>
-              </>
-            )}
-          </button>
-        </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onAnalyze}
+              disabled={isLoading}
+              className="px-6 py-3.5 bg-gradient-to-r from-solana-purple to-purple-700 hover:from-purple-600 hover:to-solana-purple text-white font-semibold rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-solana-purple/20 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>Run Tracer</span>
+                </>
+              )}
+            </button>
 
-        {/* Quick Presets */}
-        <div className="flex items-center space-x-2 pt-2">
-          <span className="text-xs text-solana-muted font-mono flex items-center space-x-1">
-            <FileCode className="w-3.5 h-3.5" />
-            <span>Presets:</span>
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_SIGNATURES.map((preset, idx) => (
+            {(signature || hasData) && (
               <button
-                key={idx}
-                onClick={() => {
-                  setSignature(preset.hash);
-                }}
-                className="text-xs font-mono px-3 py-1 rounded-md bg-solana-dark border border-solana-border text-slate-300 hover:text-solana-green hover:border-solana-green/50 transition-all"
+                onClick={onClear}
+                disabled={isLoading}
+                className="px-4 py-3.5 bg-solana-card hover:bg-red-500/10 border border-solana-border hover:border-red-500/40 text-slate-300 hover:text-red-400 font-semibold rounded-xl flex items-center space-x-2 transition-all cursor-pointer"
+                title="Clear transaction and bytecode results"
               >
-                {preset.label}
+                <RotateCcw className="w-4 h-4" />
+                <span>Clear</span>
               </button>
-            ))}
+            )}
           </div>
         </div>
       </div>

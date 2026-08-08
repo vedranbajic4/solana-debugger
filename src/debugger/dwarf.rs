@@ -62,6 +62,36 @@ impl DwarfLineMapper {
 
                 let header = unit.header();
                 let next_offset = offset.0 + header.unit_length() as usize + 4;
+                
+                fn attr_to_string(attr: gimli::AttributeValue<gimli::EndianSlice<RunTimeEndian>>) -> String {
+                    match attr {
+                        gimli::AttributeValue::String(s) => s.to_string_lossy().to_string(),
+                        _ => String::new(),
+                    }
+                }
+
+                let mut file_table: Vec<String> = Vec::new();
+                for file_entry in header.file_names().iter() {
+                    let file_name = attr_to_string(file_entry.path_name());
+                    let dir_idx = file_entry.directory_index();
+                    
+                    let dir_path = if dir_idx > 0 {
+                        header.include_directories()
+                            .get((dir_idx - 1) as usize)
+                            .map(|d| attr_to_string(d.clone()))
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+                    
+                    let full_path = if dir_path.is_empty() {
+                        file_name
+                    } else {
+                        format!("{}/{}", dir_path, file_name)
+                    };
+                    file_table.push(full_path);
+                }
+
                 let mut rows = unit.rows();
 
                 while let Ok(Some((_, row))) = rows.next_row() {
@@ -71,10 +101,17 @@ impl DwarfLineMapper {
                             gimli::ColumnType::LeftEdge => 1,
                         };
 
+                        let file_idx = row.file_index() as usize;
+                        let file_path = if file_idx > 0 && file_idx <= file_table.len() {
+                            file_table[file_idx - 1].clone()
+                        } else {
+                            "unknown_source".to_string()
+                        };
+
                         pc_to_location.insert(
                             row.address(),
                             SourceLocation {
-                                file_path: "src/processor.rs".to_string(),
+                                file_path,
                                 line: line.get(),
                                 column: column_val,
                             },
