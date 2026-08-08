@@ -24,7 +24,7 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 
 | file | role |
 |---|---|
-| `fetch-tx.ts` | `npm run fetch` — decoded post-mortem, two-tier output |
+| `fetch-tx.ts` | `npm run fetch` — renderer over `lib/report.ts`, two-tier output + `--json` |
 | `replay-tx.ts` | `npm run replay` — printer over `lib/replay.ts` |
 | `verify-replay.ts` | `npm run verify` — batch replay, match rate |
 | `build-corpus.ts` | `npm run corpus` — samples mainnet blocks into `corpus.json` |
@@ -48,8 +48,9 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 
 Four directives that outlive any single file:
 
-- **Keep `fetch-tx.ts`'s two tiers honest.** Everything the summary needs is computed in one GATHER block before any output, so detail sections reuse those values rather than recomputing. Anything that changes how much to *trust* the summary — the CPI-attribution caveat, truncated logs — is a `warning` row in the summary, never only behind `--verbose`. A section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
-- **Keep `replay-tx.ts` a printer.** Logic that lands there is logic `verify-replay.ts` can't measure.
+- **Keep `fetch-tx.ts` and `replay-tx.ts` printers.** Both render a structure someone else computed (`buildDebugReport()` and `replayTransaction()`). Logic that lands in `replay-tx.ts` is logic `verify-replay.ts` can't measure; logic that lands in `fetch-tx.ts` makes `--json` a different answer from the text.
+- **Keep `fetch-tx.ts`'s two tiers honest.** Default is the summary and what moved; `--verbose` adds the evidence. Anything that changes how much to *trust* the summary — a shaky attribution, truncated logs — rides in `report.warnings` and prints in the summary, never only behind `--verbose`. A section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
+- **`report.warnings` is for doubt, not for domain facts.** "A failed transaction moves only the fee" is a fact about Solana and belongs next to the balances; it was briefly a warning, and diluting the warning slot that way trains a reader to skim past the caveats that do matter.
 - **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` (see the CPI gotcha below) and `decodeNativeIx()`, which returns null on an unrecognised discriminant — a confident "Transfer 5 SOL" that's wrong is worse than no answer. `.idl-cache/` is gitignored and disposable; `pruneIdlCache()` throws it away if a cached IDL ever goes stale.
 - **Keep `DebugReport` serializable.** No `bigint`/`Buffer`/`PublicKey`; u64 token amounts are decimal strings, because the report exists to survive JSON, disk, and a diff between runs.
 - **Let a decoder contradict itself out loud.** `diffAccountFields()` cross-checks against the byte count and reports "bytes changed but no field differs" rather than a confident empty diff; `lib/borsh.ts` stops at the first thing it can't read instead of skipping a field and misaligning everything after. Both would be easy to "clean up" into silence — don't.

@@ -376,13 +376,12 @@ export async function buildDebugReport(
     });
   }
 
-  // A failed transaction is rolled back, so movement is fee only. Saying so
-  // here keeps every renderer from having to remember it.
-  if (rawErr && lamports.length > 0) {
-    warnings.push(
-      "transaction failed — lamport movement is the fee only; program state was rolled back"
-    );
-  }
+  // Note deliberately NOT pushed to `warnings`: that a failed transaction moves
+  // only the fee is a fact about Solana, not a reason to doubt anything here.
+  // `warnings` is reserved for caveats that change how much to trust the
+  // report's own conclusions, and diluting it with domain notes would train a
+  // reader to skim past the ones that matter. Renderers explain fee-only
+  // movement where they show the movement.
 
   return {
     signature,

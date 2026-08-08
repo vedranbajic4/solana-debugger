@@ -73,5 +73,11 @@
 [ ] first 8 rules
 [ ] counterfactual battery (CU / balance / time / account)
 [ ] instruction bisect
-[ ] CLI renderer + --json
+[x] CLI renderer + --json
+    fetch-tx.ts is now a pure renderer over buildDebugReport — its duplicate
+    GATHER block is gone, so --json and the text are the same conclusions.
+    Default tier byte-for-byte as before (442 vs 445 bytes); --verbose gains a
+    CALL TREE section, self-CU-per-program, and decoded instruction args, so a
+    failing swap now reads "pump_amm sell base_amount_in=23101
+    min_quote_amount_out=18351529" next to its ExceededSlippage.
 [ ] end-to-end on the 0xdead tx
