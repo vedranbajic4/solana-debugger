@@ -1,5 +1,5 @@
 // fetch-tx.ts
-// Usage: RPC_URL=https://your-helius-or-quicknode-url npx ts-node fetch-tx.ts <SIGNATURE>
+// Usage: RPC_URL=https://your-helius-or-quicknode-url npx tsx fetch-tx.ts <SIGNATURE>
 
 import {
   Connection,
@@ -17,7 +17,7 @@ function isParsedInstruction(
 async function main(): Promise<void> {
   const signature = process.argv[2];
   if (!signature) {
-    console.error("Usage: npx ts-node fetch-tx.ts <SIGNATURE>");
+    console.error("Usage: npx tsx fetch-tx.ts <SIGNATURE>");
     process.exit(1);
   }
 
