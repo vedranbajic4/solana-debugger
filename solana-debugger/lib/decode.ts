@@ -7,7 +7,9 @@ export type NormalizedIx = {
   dataBase64: string;
 };
 
-export function normalizeInstructions(tx: VersionedTransactionResponse) {
+export function normalizeInstructions(
+  tx: VersionedTransactionResponse,
+): NormalizedIx[] {
   const msg = tx.transaction.message;
   const loaded = tx.meta?.loadedAddresses;
 

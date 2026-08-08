@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "fetch": "tsx --env-file=.env fetch-tx.ts",
-    "replay": "tsx --env-file=.env replay-tx.ts"
+    "replay": "tsx --env-file=.env replay-tx.ts",
+    "verify": "tsx --env-file=.env verify-replay.ts",
+    "corpus": "tsx --env-file=.env build-corpus.ts",
+    "test:archive": "tsx --env-file=.env test-archive.ts"
   },
   "keywords": [],
   "author": "",

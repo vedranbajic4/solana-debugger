@@ -1,0 +1,233 @@
+{
+  "generatedAt": "2026-08-08T12:49:22.633Z",
+  "mainnetTip": 437995792,
+  "sampledSlots": [
+    437995752,
+    437995715,
+    437995678,
+    437995641,
+    437995604
+  ],
+  "entries": [
+    {
+      "signature": "2eHi5PFSv3cHtvG2h31P7KH5DSERLkEWdAWAq3oHQTmKkaQShB8VafGMRL6FNGUCNzcjcAjQgku3xzGfXrEkP5TS",
+      "slot": 437995752,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[2,{\"Custom\":6074}]}",
+      "computeUnits": 46455,
+      "accounts": 19,
+      "instructions": 4,
+      "program": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+    },
+    {
+      "signature": "49cgDDRXg2podtTgUPSsUU9urGVcphZ5QC4PhvVQ6YpbvVfW8mHcHd6pjmLLb8Wquue5BkjvSXR32LM7TacPHLiC",
+      "slot": 437995752,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[2,{\"Custom\":6074}]}",
+      "computeUnits": 38955,
+      "accounts": 19,
+      "instructions": 4,
+      "program": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+    },
+    {
+      "signature": "2AVjEqnp2bsEyqm3Mx1fJDSxv5UQQifcjHtH7TXARGJPrqexJD9aycH9Wzvg5xPkfqpiVJUsTWz3uyWHEGWepNvB",
+      "slot": 437995752,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[4,{\"Custom\":6004}]}",
+      "computeUnits": 56763,
+      "accounts": 23,
+      "instructions": 6,
+      "program": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
+    },
+    {
+      "signature": "2gZAkifeqPTYqTuJ5YrcJhpZAXmZyoUdUfNYkQYVM98YcFYseNeNnTSpVqpsvNNFaQvsdVcHt1LZeTmK8B8hKFiW",
+      "slot": 437995752,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[5,{\"Custom\":6004}]}",
+      "computeUnits": 73000,
+      "accounts": 23,
+      "instructions": 7,
+      "program": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
+    },
+    {
+      "signature": "2X2PUmrrKwKb52DuDEu5kna7xoqLiuDTaZRx7aPDqMspv2Sa9p4upLHhbUVvE7MVPJyzGggZkacH7WSxwbogNkb",
+      "slot": 437995715,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[3,{\"Custom\":202}]}",
+      "computeUnits": 90030,
+      "accounts": 25,
+      "instructions": 4,
+      "program": "joeHSutRWndCtp1EPx5tz5zHyaPBZUZ5JsxDEVB1RPZ"
+    },
+    {
+      "signature": "4VPL84zLTHopwGkQh3SkyNS2Q3JPag9CVcH27jwhV8s4idP21vKZiNEyfsAyA5QpFVA4UKKGeMP8zyn5F6aT5Y3W",
+      "slot": 437995715,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[1,{\"Custom\":3131746989}]}",
+      "computeUnits": 74566,
+      "accounts": 29,
+      "instructions": 5,
+      "program": "RotomuxWTS7g2DsNYrKAeJSgAfLos1LvYSL6TC6MmLz"
+    },
+    {
+      "signature": "4GMf9VZLXPnGFp41w3a4rcFCneiZwoSWhi4vQx3vScda1xXTtf8rE5EfWgsAjXF6XvAKV1wZXx6noPfYrBAuqMSp",
+      "slot": 437995715,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[1,{\"Custom\":1006}]}",
+      "computeUnits": 107396,
+      "accounts": 29,
+      "instructions": 5,
+      "program": "CkvEApcoFPWUgBDheYvUzHqtUj58AXop7vwizEieXXSE"
+    },
+    {
+      "signature": "2hdHSYamiDaT6puVyA8tcAzuDKTtmby23PP7JtUCwJYHjJzP3Wu7p6fb7fNGhkFb1fSRnZsLmwUQgA6vb1gRdD4h",
+      "slot": 437995715,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[4,{\"Custom\":1}]}",
+      "computeUnits": 82726,
+      "accounts": 30,
+      "instructions": 6,
+      "program": "BxM2ipMbq66MuCdSDgjxMpc3cPUvoKLZ9CcSxqwmWQH"
+    },
+    {
+      "signature": "3aHTfLBpNmnt1DoqMGBPKv3aAcszqwSq9gtYtXK7AMygpe16Agx5K7fRfd3tM4NXkTNwDACZFAoSDGrr4z6yzAVY",
+      "slot": 437995678,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[3,{\"Custom\":1}]}",
+      "computeUnits": 16863,
+      "accounts": 29,
+      "instructions": 10,
+      "program": "11111111111111111111111111111111"
+    },
+    {
+      "signature": "3JUgPiqDocuwCEUJVdkE7n6dvMkvqtyzPgdhw48hBqwKb1VXgc35zdG9CYNgwWFn34uM5AwokHJKmofoU31HueSB",
+      "slot": 437995678,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[5,{\"Custom\":6004}]}",
+      "computeUnits": 56632,
+      "accounts": 30,
+      "instructions": 6,
+      "program": "AnoFHzDSvgUmvKCnf9eu7GF9ex5RGGxJDCQXpDVXpYWH"
+    },
+    {
+      "signature": "ijoTu18E6qTuhkiNW8fCAmDis9eVBuQk2xaXNkxr8HmPRnZg1HTWYdFm5rKYuQjRxrCJgfBXZ6gmscSpY6WwjGZ",
+      "slot": 437995678,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[5,{\"Custom\":6004}]}",
+      "computeUnits": 56632,
+      "accounts": 30,
+      "instructions": 6,
+      "program": "AnoFHzDSvgUmvKCnf9eu7GF9ex5RGGxJDCQXpDVXpYWH"
+    },
+    {
+      "signature": "DkCZ1MBzFQwZNBqGb6XqrBtHATUHe9BrYzzpYrFFy3WkEHQD1fDEBtnJDP8xiBfQdXvweCN5EatiMKYr4Tk56Lu",
+      "slot": 437995678,
+      "version": "v0",
+      "outcome": "failed",
+      "err": "{\"InstructionError\":[3,{\"Custom\":6001}]}",
+      "computeUnits": 120454,
+      "accounts": 36,
+      "instructions": 5,
+      "program": "5RzuksK64RnaBmZLDds13R19V4Smr5y1Ve7aU5GhrHPe"
+    },
+    {
+      "signature": "3ucui1pHcw76hkVvYg4h1H3zWyojMGo6WjiQxnFAC31q1ADzPu85QFVsCkcoDsvHeX78s9oJKiwcr82BvpexxXZe",
+      "slot": 437995641,
+      "version": "v0",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 27490,
+      "accounts": 12,
+      "instructions": 5,
+      "program": "GKybPT5ZzV5NgkXy1Pa8Bnu14MS7euEtK8j9zWHzYJpx"
+    },
+    {
+      "signature": "2HGaGywyyfCKNmprjk8GirWcLMmPuUqf8AHA6D42bWSndXVvjTxHon5QnvUeYnWP94ULZoaPGoV1hPtFuz7qp8y1",
+      "slot": 437995641,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 24815,
+      "accounts": 13,
+      "instructions": 3,
+      "program": "FyTBuifdJ1u3rF2bsK2NmjzogkCbNK3KtFfZyM3CUfv1"
+    },
+    {
+      "signature": "2bR3C8k6UjKjLcLw1E2pMG79PHHz8hXmXtBfdeehr5Ay8stg1nzUsiiVUikLnwcuz4F4YBcJ1usYu5caieoCeCsi",
+      "slot": 437995641,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 35315,
+      "accounts": 13,
+      "instructions": 3,
+      "program": "FyTBuifdJ1u3rF2bsK2NmjzogkCbNK3KtFfZyM3CUfv1"
+    },
+    {
+      "signature": "eKSdLcUe4vSw7joGXuah38trCKcLQ456wf9PdLncdfWifFqWm5pwJj4Bw5xKV43Tjtcsg4uTUSk3jCGbkWaH4F2",
+      "slot": 437995641,
+      "version": "v0",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 56820,
+      "accounts": 14,
+      "instructions": 6,
+      "program": "D8C8iW6zmoKg5TRr8nQ7h14TMWqQX8FiBdj2ju5MF3wa"
+    },
+    {
+      "signature": "2h6CBikRMNy3UrYa7oJqxuF2BL53D1wE9gNQzLuXFDPjc2t8f3zJmNErnPerPuwuoaTBHdrZkYd8cS6YwMafhuZx",
+      "slot": 437995604,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 49439,
+      "accounts": 11,
+      "instructions": 5,
+      "program": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+    },
+    {
+      "signature": "2inGy5Z5DpeUGf69ybDzMSYXtzopiZ2bTMVfSM8DVU2meJAfh62eEuZzhir2MteEEyBY8jJpUdTHF7PVVN11xGPK",
+      "slot": 437995604,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 34577,
+      "accounts": 12,
+      "instructions": 3,
+      "program": "SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ"
+    },
+    {
+      "signature": "2TDvx3dETX3JxzKUcdcSCMdVUud2FkZRXb4oKwm5x83rQDQPkk4vP1U7aPZtRkJMnrxgQuFR6NqLUmGrntQP5SuX",
+      "slot": 437995604,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 31775,
+      "accounts": 12,
+      "instructions": 3,
+      "program": "SKRskrmtL83pcL4YqLWt6iPefDqwXQWHSw9S9vz94BZ"
+    },
+    {
+      "signature": "5FwjsGAHSFxHL5ka43FK7N8STcxPbzSsfxwvsPfouAUaVv4vGXTxQ4QWxP8rGP6ZDcuvnzwXSZjvAMf9j3N12ajJ",
+      "slot": 437995604,
+      "version": "legacy",
+      "outcome": "success",
+      "err": null,
+      "computeUnits": 76573,
+      "accounts": 16,
+      "instructions": 8,
+      "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    }
+  ]
+}
