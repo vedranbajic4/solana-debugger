@@ -4,16 +4,27 @@ import { FileCode2, Loader2, Code, AlertCircle } from 'lucide-react';
 interface PseudocodeViewerProps {
   programId: string;
   failureContext?: any;
+  autoExpand?: boolean;
 }
 
-export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext, autoExpand = false }) => {
+  const [isOpen, setIsOpen] = useState(autoExpand);
   const [isLoading, setIsLoading] = useState(false);
   const [pseudocode, setPseudocode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPseudocode = async () => {
-    if (pseudocode) {
+  React.useEffect(() => {
+    setPseudocode(null);
+    setError(null);
+    setIsOpen(autoExpand);
+    if (autoExpand) {
+      fetchPseudocode(programId);
+    }
+  }, [programId, autoExpand]);
+
+  const fetchPseudocode = async (pid?: string) => {
+    const targetPid = pid || programId;
+    if (pseudocode && targetPid === programId) {
       setIsOpen(!isOpen);
       return;
     }
@@ -23,7 +34,7 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
     setIsOpen(true);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/pseudocode/${programId}`);
+      const response = await fetch(`http://localhost:3001/api/pseudocode/${targetPid}`);
       const data = await response.json();
       
       if (!response.ok || !data.success) {
@@ -42,7 +53,7 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
   return (
     <div className="mt-3">
       <button
-        onClick={fetchPseudocode}
+        onClick={() => fetchPseudocode()}
         disabled={isLoading}
         className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-cyan-900/40 hover:bg-cyan-800/60 border border-cyan-500/30 text-cyan-300 font-semibold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >

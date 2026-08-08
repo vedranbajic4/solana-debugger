@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { FileCode2, MapPin, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { PseudocodeViewer } from './PseudocodeViewer';
 
 export interface SourceLineData {
   line: number;
@@ -27,6 +28,8 @@ export interface FailureContextData {
 interface SourceCodeViewerProps {
   sourceContext?: SourceContextData | null;
   failureContext?: FailureContextData | null;
+  selectedProgramId?: string | null;
+  selectedFunctionName?: string | null;
 }
 
 // Simple Rust syntax highlighting
@@ -130,6 +133,8 @@ function highlightRust(text: string): React.ReactNode[] {
 export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   sourceContext,
   failureContext,
+  selectedProgramId,
+  selectedFunctionName,
 }) => {
   const errorLineRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +144,10 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
     }
   }, [sourceContext]);
 
-  if (!sourceContext && !failureContext) return null;
+  if (!sourceContext && !failureContext && !selectedProgramId) return null;
+
+  const targetProgramId = selectedProgramId || failureContext?.failedProgramId;
+  const isSelectedFailing = targetProgramId === failureContext?.failedProgramId;
 
   // If source is not available, show a minimal info card
   if (sourceContext && !sourceContext.available) {
@@ -170,39 +178,63 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             )}
           </div>
         )}
+        
+        {targetProgramId && (
+          <div className="mt-4">
+            <PseudocodeViewer 
+              programId={targetProgramId} 
+              failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
+              autoExpand={true}
+            />
+          </div>
+        )}
       </div>
     );
   }
 
   if (!sourceContext || sourceContext.sourceLines.length === 0) {
     // Show failure context summary if we have it but no source
-    if (failureContext) {
-      return (
-        <div className="glass-panel p-5 rounded-2xl border border-[#1e222d] mb-6 font-mono text-xs">
-          <div className="flex items-center space-x-2 text-slate-400 mb-3">
-            <AlertCircle className="w-4 h-4 text-rose-400" />
-            <span className="font-bold text-sm text-slate-300 uppercase tracking-wider">
-              Failure Context
-            </span>
-          </div>
-          {failureContext.failedProgramId && (
-            <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
-              <span>Program:</span>
-              <span className="text-rose-400 font-semibold">{failureContext.failedProgramId}</span>
-            </div>
-          )}
-          {failureContext.failedInstructionIndex !== undefined && (
-            <div className="flex items-center space-x-2 text-xs text-slate-400">
-              <span>Failed at instruction index:</span>
-              <span className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold">
-                #{failureContext.failedInstructionIndex}
+    return (
+      <div className="glass-panel p-5 rounded-2xl border border-[#1e222d] mb-6 font-mono text-xs">
+        {failureContext && isSelectedFailing && (
+          <>
+            <div className="flex items-center space-x-2 text-slate-400 mb-3">
+              <AlertCircle className="w-4 h-4 text-rose-400" />
+              <span className="font-bold text-sm text-slate-300 uppercase tracking-wider">
+                Failure Context
               </span>
             </div>
-          )}
-        </div>
-      );
-    }
-    return null;
+            {failureContext.failedProgramId && (
+              <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
+                <span>Program:</span>
+                <span className="text-rose-400 font-semibold">{failureContext.failedProgramId}</span>
+              </div>
+            )}
+            {failureContext.failedInstructionIndex !== undefined && (
+              <div className="flex items-center space-x-2 text-xs text-slate-400 mb-4">
+                <span>Failed at instruction index:</span>
+                <span className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold">
+                  #{failureContext.failedInstructionIndex}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+        
+        {targetProgramId && (
+          <div>
+            <div className="mb-2 text-slate-400">
+              Selected Program: <span className="text-cyan-400 font-semibold">{targetProgramId}</span>
+            </div>
+            <PseudocodeViewer 
+              programId={targetProgramId}
+              failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
+              autoExpand={true}
+            />
+          </div>
+        )}
+      </div>
+    );
   }
 
   // Full source code viewer with highlighted error line
@@ -242,6 +274,17 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
               <> at instruction <span className="font-bold text-rose-200">#{failureContext.failedInstructionIndex}</span></>
             )}
           </span>
+        </div>
+      )}
+
+      {/* Ghidra Pseudocode Fallback/Alternative */}
+      {targetProgramId && (
+        <div className="bg-[#0b0c10] border-b border-[#1c1f2b] p-4">
+          <PseudocodeViewer 
+            programId={targetProgramId}
+            failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
+            autoExpand={false}
+          />
         </div>
       )}
 

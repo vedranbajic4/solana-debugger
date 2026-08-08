@@ -1,13 +1,18 @@
 import React from 'react';
 import { ShieldAlert, Code2, Cpu, AlertTriangle, Key, Layers, Terminal } from 'lucide-react';
 import type { AnalysisSummary } from '../App';
-import { PseudocodeViewer } from './PseudocodeViewer';
 
 interface AnchorAnalysisCardProps {
   analysisSummary?: AnalysisSummary | null;
+  onInstructionClick?: (programId: string, functionName?: string) => void;
+  selectedProgramId?: string | null;
 }
 
-export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysisSummary }) => {
+export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ 
+  analysisSummary,
+  onInstructionClick,
+  selectedProgramId
+}) => {
   if (!analysisSummary) return null;
 
   const { decodedError, decodedInstructions, accountValidations } = analysisSummary;
@@ -78,9 +83,20 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysis
           </div>
 
           <div className="divide-y divide-[#181b26] p-4 space-y-3 bg-[#0a0b10]">
-            {decodedInstructions.map((ix, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-[#12141c] border border-[#1c1f2b] hover:border-solana-purple/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start space-x-3">
+            {decodedInstructions.map((ix, idx) => {
+              const isSelected = selectedProgramId === ix.programId;
+              const isFailed = analysisSummary.failureContext?.failedInstructionIndex === idx;
+
+              return (
+                <div 
+                  key={idx} 
+                  onClick={() => onInstructionClick?.(ix.programId, ix.name)}
+                  className={`p-3.5 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer
+                    ${isSelected ? 'bg-solana-purple/10 border-solana-purple' : 'bg-[#12141c] border-[#1c1f2b] hover:border-solana-purple/40'}
+                    ${isFailed && !isSelected ? 'border-rose-500/50 bg-rose-950/20' : ''}
+                  `}
+                >
+                  <div className="flex items-start space-x-3">
                   <div className="w-8 h-8 rounded-lg bg-solana-purple/20 border border-solana-purple/40 flex items-center justify-center shrink-0 mt-0.5">
                     <Cpu className="w-4 h-4 text-solana-purple" />
                   </div>
@@ -112,15 +128,6 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysis
                       <Key className="w-3 h-3 text-slate-500" />
                       <span className="truncate max-w-xs">{ix.programId}</span>
                     </div>
-                    
-                    <PseudocodeViewer 
-                      programId={ix.programId}
-                      failureContext={
-                        analysisSummary.failureContext?.failedProgramId === ix.programId
-                          ? analysisSummary.failureContext
-                          : undefined
-                      }
-                    />
                   </div>
                 </div>
 
@@ -129,7 +136,8 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysis
                   <span className="text-cyan-300 truncate max-w-xs">{ix.dataHex || '0x'}</span>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         </div>
       )}
