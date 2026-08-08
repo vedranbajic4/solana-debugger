@@ -43,6 +43,7 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 | `lib/runtime-errors.ts` | what the non-custom runtime errors mean, and cause |
 | `lib/field-diff.ts` | named field changes from an IDL, not a byte count |
 | `lib/rules.ts` | facts → diagnosis, each finding citing its evidence |
+| `lib/counterfactual.ts` | re-replay with one variable changed; `whatif-tx.ts` prints it |
 | `lib/summary.ts` | Anchor error and log-hint extraction |
 | `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
 | `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
@@ -90,6 +91,10 @@ Two design points that are load-bearing:
 - **Archive first, metadata second.** The archive supplies opaque data; the tx's own metadata then corrects lamports and token amounts, which it knows exactly and the archive can miss (it answers as of the last write *before* the slot, so writes made earlier in the same slot are absent). `lib/replay.ts` re-reads the accounts after injecting so the metadata splice lands on archived data instead of silently overwriting it with the present-day copy read earlier.
 
 Executable accounts are skipped: overwriting a loaded program's account with a data blob breaks the fork's loader for no benefit. Pinning programs at a historical version is a separate problem.
+
+### Gotcha: a legacy `Message` exposes `compiledInstructions`, freshly derived each access
+
+Duck-typing a message as v0 by checking for `compiledInstructions` is wrong — a legacy `Message` has that property too, as a **getter that builds a new array on every access**. Writing through it mutates a throwaway copy: `rewriteComputeLimit()` reported "SetComputeUnitLimit 300000 -> 1400000" while changing nothing, so the compute counterfactual silently answered "no change" for every legacy transaction. Dispatch on `message.version`, never on which properties exist. A fixture pins both encodings.
 
 ### Gotcha: Anchor IDLs come in two shapes, and `fields` means two things
 

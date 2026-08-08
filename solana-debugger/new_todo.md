@@ -82,7 +82,18 @@
     successful txs. The 7 undiagnosed are custom codes from programs with no
     published IDL — the code is a bare number there, so any diagnosis would be
     invention. That number goes up with IDL coverage, not with more rules.
-[ ] counterfactual battery (CU / balance / time / account)
+[x] counterfactual battery (CU / balance / time / account)
+    lib/counterfactual.ts + `npm run whatif <SIG>`. Four probes: raise the
+    compute limit, +10 SOL to every writable account, 10x every token balance,
+    advance the clock an hour. One variable at a time, re-seeded between runs,
+    and every result gated on the baseline reproducing mainnet first — otherwise
+    "more compute fixed it" is a claim about the fork, not the transaction.
+    Verified both directions: a slippage failure correctly reports no-change on
+    all four (price movement isn't a resource problem), while a real
+    ComputationalBudgetExceeded tx reports the compute probe got past the wall
+    and revealed the next failure. A battery that only ever says "no change"
+    would prove nothing, so the positive case matters.
+    Time only moves forward — surfnet can't answer "what if this ran earlier".
 [ ] instruction bisect
 [x] CLI renderer + --json
     fetch-tx.ts is now a pure renderer over buildDebugReport — its duplicate

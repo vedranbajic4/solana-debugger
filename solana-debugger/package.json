@@ -13,7 +13,9 @@
     "test:report": "tsx --env-file=.env test-report.ts",
     "test:decode": "tsx --env-file=.env test-decode.ts",
     "test:errors": "tsx --env-file=.env test-errors.ts",
-    "test:rules": "tsx --env-file=.env test-rules.ts"
+    "whatif": "tsx --env-file=.env whatif-tx.ts",
+    "test:rules": "tsx --env-file=.env test-rules.ts",
+    "test:whatif": "tsx --env-file=.env test-whatif.ts"
   },
   "keywords": [],
   "author": "",
