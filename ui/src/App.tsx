@@ -1,21 +1,57 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { TransactionInput } from './components/TransactionInput';
 import { MetricsHeader } from './components/MetricsHeader';
 import { BytecodeViewer } from './components/BytecodeViewer';
 import { AlertCircle, Cpu } from 'lucide-react';
 
+export interface ChunkData {
+  success: boolean;
+  signature: string;
+  chunk: string;
+  chunkLines: string[];
+  vmLogs: string;
+  page: number;
+  totalPages: number;
+  chunkSize: number;
+  totalLines: number;
+  startIndex: number;
+  endIndex: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  metrics: {
+    statusSuccess: boolean;
+    slot: string;
+    computeUnits: string;
+  };
+}
+
 export function App() {
-  const [signature, setSignature] = useState<string>(
-    '3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQFnTnHnjmazFEgf65ZnJpZQvFLhDe9m38AA7D45D'
-  );
-  const [bytecodeText, setBytecodeText] = useState<string>('');
+  const [signature, setSignature] = useState<string>('');
+  const [chunkData, setChunkData] = useState<ChunkData | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [chunkSize, setChunkSize] = useState<number>(100);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isNavigatingChunk, setIsNavigatingChunk] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = async (sigToAnalyze?: string) => {
-    const targetSig = sigToAnalyze !== undefined ? sigToAnalyze : signature;
-    setIsLoading(true);
+  const handleAnalyze = async (
+    sigToAnalyze?: string,
+    targetPage = 1,
+    targetChunkSize = chunkSize,
+    force = false
+  ) => {
+    const targetSig = (sigToAnalyze !== undefined ? sigToAnalyze : signature).trim();
+    if (!targetSig) {
+      setError('Please enter a valid Solana transaction signature hash.');
+      return;
+    }
+
+    if (chunkData && targetSig === signature && !force) {
+      setIsNavigatingChunk(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -24,7 +60,12 @@ export function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ signature: targetSig }),
+        body: JSON.stringify({
+          signature: targetSig,
+          page: targetPage,
+          chunkSize: targetChunkSize,
+          force,
+        }),
       });
 
       const data = await response.json();
@@ -33,19 +74,49 @@ export function App() {
         throw new Error(data.error || 'Failed to analyze transaction bytecode');
       }
 
-      setBytecodeText(data.bytecode);
+      setChunkData(data);
+      setCurrentPage(data.page);
+      setChunkSize(data.chunkSize);
     } catch (err: any) {
       console.error('Error fetching analysis:', err);
       setError(err.message || 'Could not connect to Solana Debugger backend (localhost:3001)');
     } finally {
       setIsLoading(false);
+      setIsNavigatingChunk(false);
     }
   };
 
-  // Automatically trigger initial analysis on mount
-  useEffect(() => {
-    handleAnalyze();
-  }, []);
+  const handleClear = () => {
+    setSignature('');
+    setChunkData(null);
+    setCurrentPage(1);
+    setError(null);
+  };
+
+  const handleNextChunk = () => {
+    if (chunkData && chunkData.hasNext && !isLoading && !isNavigatingChunk) {
+      handleAnalyze(signature, currentPage + 1, chunkSize);
+    }
+  };
+
+  const handlePreviousChunk = () => {
+    if (chunkData && chunkData.hasPrevious && !isLoading && !isNavigatingChunk) {
+      handleAnalyze(signature, currentPage - 1, chunkSize);
+    }
+  };
+
+  const handleJumpToPage = (page: number) => {
+    if (chunkData && page >= 1 && page <= chunkData.totalPages && !isLoading && !isNavigatingChunk) {
+      handleAnalyze(signature, page, chunkSize);
+    }
+  };
+
+  const handleChangeChunkSize = (newSize: number) => {
+    setChunkSize(newSize);
+    if (chunkData) {
+      handleAnalyze(signature, 1, newSize);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0c10] text-slate-100 flex flex-col selection:bg-solana-purple selection:text-white">
@@ -58,8 +129,10 @@ export function App() {
         <TransactionInput
           signature={signature}
           setSignature={setSignature}
-          onAnalyze={() => handleAnalyze()}
+          onAnalyze={() => handleAnalyze(signature, 1, chunkSize, true)}
+          onClear={handleClear}
           isLoading={isLoading}
+          hasData={Boolean(chunkData)}
         />
 
         {/* Error Alert */}
@@ -70,17 +143,26 @@ export function App() {
               <p className="font-bold">Execution Error</p>
               <p className="text-xs text-red-300/80">{error}</p>
               <p className="text-xs text-solana-muted mt-1">
-                Make sure the backend server is running (<span className="text-solana-purple font-mono">node server.js</span> in <span className="text-solana-green font-mono">ui/</span>).
+                Make sure the backend server is running (<span className="text-solana-purple font-mono">make run</span> or <span className="text-solana-green font-mono">npm run server</span> in <span className="text-solana-green font-mono">ui/</span>).
               </p>
             </div>
           </div>
         )}
 
         {/* Status Metrics */}
-        <MetricsHeader signature={signature} bytecodeText={bytecodeText} />
+        <MetricsHeader signature={signature} metrics={chunkData?.metrics} />
 
         {/* Main Code & Disassembly Viewer */}
-        <BytecodeViewer bytecodeText={bytecodeText} />
+        <BytecodeViewer
+          bytecodeText={chunkData?.chunk || ''}
+          chunkData={chunkData}
+          onPreviousChunk={handlePreviousChunk}
+          onNextChunk={handleNextChunk}
+          onJumpToPage={handleJumpToPage}
+          onChangeChunkSize={handleChangeChunkSize}
+          isNavigatingChunk={isNavigatingChunk}
+          onClear={handleClear}
+        />
       </main>
 
       {/* Footer */}
@@ -90,7 +172,7 @@ export function App() {
             <Cpu className="w-4 h-4 text-solana-green" />
             <span>Solana Debugger & SBF Tracer Engine (Agave / solana-sdk)</span>
           </div>
-          <div>Step 1 & Step 2 Complete • Disassembly + DWARF Line Tables</div>
+          <div>Bytecode Iterator Pattern Enabled • ~100 Lines per Chunk</div>
         </div>
       </footer>
     </div>

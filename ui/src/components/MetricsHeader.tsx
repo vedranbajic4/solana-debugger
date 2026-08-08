@@ -3,19 +3,29 @@ import { CheckCircle2, XCircle, Gauge, Database, Hash } from 'lucide-react';
 
 interface MetricsHeaderProps {
   signature: string;
-  bytecodeText: string;
+  bytecodeText?: string;
+  metrics?: {
+    statusSuccess: boolean;
+    slot: string;
+    computeUnits: string;
+  };
 }
 
-export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ signature, bytecodeText }) => {
-  if (!bytecodeText) return null;
+export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ signature, bytecodeText, metrics }) => {
+  if (!bytecodeText && !metrics) return null;
 
-  // Extract metadata from bytecodeText header
-  const statusSuccess = bytecodeText.includes('SUCCESS') || bytecodeText.includes('SUCCESS ✅');
-  const slotMatch = bytecodeText.match(/Slot:\s+(\d+)/);
-  const slot = slotMatch ? slotMatch[1] : 'N/A';
+  // Extract metadata from metrics or bytecodeText header
+  const statusSuccess = metrics ? metrics.statusSuccess : (bytecodeText?.includes('SUCCESS') || bytecodeText?.includes('SUCCESS ✅') || false);
+  
+  const slot = metrics ? metrics.slot : (() => {
+    const slotMatch = bytecodeText?.match(/Slot:\s+(\d+)/);
+    return slotMatch ? slotMatch[1] : 'N/A';
+  })();
 
-  const cuMatch = bytecodeText.match(/Compute Units Consumed:\s+(\d+)/i) || bytecodeText.match(/Compute Units:\s+(\d+)/i);
-  const computeUnits = cuMatch ? parseInt(cuMatch[1]).toLocaleString() : 'N/A';
+  const computeUnits = metrics ? metrics.computeUnits : (() => {
+    const cuMatch = bytecodeText?.match(/Compute Units Consumed:\s+(\d+)/i) || bytecodeText?.match(/Compute Units:\s+(\d+)/i);
+    return cuMatch ? parseInt(cuMatch[1]).toLocaleString() : 'N/A';
+  })();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

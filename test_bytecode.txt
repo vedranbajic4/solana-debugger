@@ -1,10 +1,10 @@
 ==================================================================================================
 SOLANA TRANSACTION LOW-LEVEL SBF BYTECODE & DWARF SOURCE TRACE
 ==================================================================================================
-Transaction Signature: 3hWQLvTE17trgHNL7DUDQ912bBddNoCicYfFQMJ5YZgA1XN8pRfrYs1mQEeAeHEqGStyUrnqZeAqfB2fUT6zyB1m
-Slot:                  437983474
+Transaction Signature: 3aFo1pGzZ2dFp6cxar87uv9QS2qSgUe7BXC1Pe98MLCgLZNtQFnTnHnjmazFEgf65ZnJpZQvFLhDe9m38AA7D45D
+Slot:                  437888086
 Execution Status:      SUCCESS ✅
-Compute Units Consumed: 100500 CU
+Compute Units Consumed: 88274 CU
 
 --- 📜 VM EXECUTION LOGS ---
 [01] Program ComputeBudget111111111111111111111111111111 invoke [1]
@@ -30,33 +30,30 @@ Compute Units Consumed: 100500 CU
 [21] Program log: Instruction: BuyExactQuoteIn
 [22] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ invoke [2]
 [23] Program log: Instruction: GetFees
-[24] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ consumed 5660 of 244257 compute units
+[24] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ consumed 5660 of 244691 compute units
 [25] Program return: pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ GQAAAAAAAAAFAAAAAAAAAAAAAAAAAAAA
 [26] Program pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ success
 [27] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
-[28] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 233660 compute units
+[28] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 112 of 234095 compute units
 [29] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
-[30] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[31] Program log: Instruction: TransferChecked
-[32] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2562 of 231073 compute units
-[33] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[34] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[35] Program log: Instruction: TransferChecked
-[36] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2562 of 225781 compute units
-[37] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[38] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [2]
-[39] Program log: Instruction: TransferChecked
-[40] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb consumed 2562 of 214244 compute units
-[41] Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success
-[42] Program data: Z/RSHyz1d3drEXdqAAAAAHBsZDwAAAAAFEq0tFoAAAAAAAAAAAAAAJ5+d82tAAAAGPw39h0AAAAQHpZagywAABRKtLRaAAAAGQAAAAAAAADizOA5AAAAAAUAAAAAAAAALlyTCwAAAADm7SCpWgAAAAQhQG9aAAAArPOo0beCi2LrWGc/kpfYLufB87pzF8j6UHOcNAazClOioFWabQXDWEQXqt2dqvlw6xI5scaN39GuBtxnvJMcVvhTn+1HQ09KthBI06REgsJ4QR8TI7riw4MKIjTgpzUfkdQ/SIL8rtNbGyei7vtMnAsuo4TVqZFYnpeELnPwAoVKwvjQ3Vy8l+MonBl8tQYqVPPZVrnOblEV+WVnqlyz5tZlUO3zbNz/EDqs0osqyL/rn/iFjAQjWxPkXW6vk09kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkiTHOAAAAAASAAAAYnV5X2V4YWN0X3F1b3RlX2luAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAAF67JBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-[43] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [2]
-[44] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 2095 of 203897 compute units
-[45] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
-[46] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 86819 of 286437 compute units
-[47] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
-[48] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]
-[49] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 118 of 199618 compute units
-[50] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[30] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[31] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 231479 compute units
+[32] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[33] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[34] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 228615 compute units
+[35] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[36] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]
+[37] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 105 of 224006 compute units
+[38] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
+[39] Program data: Z/RSHyz1d3dCdHZqAAAAALcbx2cAAAAAZSWqYsQAAAAAAAAAAAAAAMAedDApAwAAVcGz9E0AAACldcqbUJIAAGUlqmLEAAAAGQAAAAAAAAD3i099AAAAAAUAAAAAAAAAy+gPGQAAAACaPJpJxAAAAKOwSszDAAAAR9OoFwJoExclijOabnQ4OVLJDtZ7+XOiAo3ROQW30VgMfYbEewnHWO8vKlWvSewRvNHItggYohldFaBkHAHgYYHho/OjefatZLca6cFvOEkI5KRW93xgCBNXaBLuyKpnC1B4jzo7bh1MYLVaWsz5Gg09Zr8t0Q3lzBaM/n1j+gpKwvjQ3Vy8l+MonBl8tQYqVPPZVrnOblEV+WVnqlyz5t+aBhhgCGmMclsRkum4OVQKbjU1WqBIiJL4A8OIagzSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6yLAXwAAAAASAAAAYnV5X2V4YWN0X3F1b3RlX2luAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAAZfSHDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+[40] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA invoke [2]
+[41] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 2095 of 216116 compute units
+[42] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
+[43] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA consumed 74593 of 286437 compute units
+[44] Program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA success
+[45] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]
+[46] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 118 of 211844 compute units
+[47] Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success
 
 ==================================================================================================
 SBF BYTECODE DISASSEMBLY STREAM (PROGRAM BY PROGRAM)
