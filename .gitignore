@@ -30,7 +30,7 @@ bytecode.txt
 solana-tx/node_modules/
 
 # Ghidra generated C pseudocode & binaries
-*_out.c
+*.c
 *.so
 
 # Additional text dumps
