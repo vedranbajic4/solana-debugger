@@ -69,8 +69,19 @@
     "412 bytes changed at offset 8" becomes named field deltas. Wired into the
     replay path. Cross-checks itself: if bytes moved but no field differs, the
     layout is wrong and it says so rather than reporting a confident nothing.
-[ ] rule engine scaffold
-[ ] first 8 rules
+[x] rule engine scaffold
+    lib/rules.ts — pure (report) => Finding | null, no network, no ordering
+    dependencies. Findings carry evidence + coarse confidence; a throwing rule
+    is a silent no-op so a bad heuristic can't cost the facts it decorated.
+    Surfaced as DebugReport.findings and as the CLI's LIKELY CAUSE section.
+[x] first 8 rules
+    compute-exhausted, compute-near-limit, slippage-exceeded, missing-signer,
+    pda-seeds-mismatch, already-initialized, insufficient-balance,
+    attribution-uncertain.
+    Live on the corpus: 5/12 failures diagnosed, 0 false positives on the 8
+    successful txs. The 7 undiagnosed are custom codes from programs with no
+    published IDL — the code is a bare number there, so any diagnosis would be
+    invention. That number goes up with IDL coverage, not with more rules.
 [ ] counterfactual battery (CU / balance / time / account)
 [ ] instruction bisect
 [x] CLI renderer + --json

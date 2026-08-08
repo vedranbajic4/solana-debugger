@@ -143,6 +143,31 @@ function renderSummary(report: DebugReport) {
   }
 }
 
+/**
+ * What the facts add up to.
+ *
+ * Printed right below the summary because it's the answer to the question that
+ * was actually asked. Silence when nothing matched is correct — a diagnosis
+ * invented to fill the space would be worse than none.
+ */
+function renderDiagnosis(report: DebugReport) {
+  if (report.findings.length === 0) return;
+  section("LIKELY CAUSE");
+  for (const f of report.findings) {
+    console.log(`  ${f.title}  [${f.confidence}]`);
+    for (const e of f.evidence) {
+      for (const [i, line] of wrap(e, 66).entries()) {
+        console.log(i === 0 ? `      because: ${line}` : `               ${line}`);
+      }
+    }
+    if (f.suggestion) {
+      for (const [i, line] of wrap(f.suggestion, 66).entries()) {
+        console.log(i === 0 ? `      try:     ${line}` : `               ${line}`);
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- movements
 
 function renderMovements(report: DebugReport, verbose: boolean) {
@@ -360,6 +385,7 @@ async function main() {
   }
 
   renderSummary(report);
+  renderDiagnosis(report);
   renderMovements(report, verbose);
 
   if (!verbose) {

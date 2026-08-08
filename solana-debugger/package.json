@@ -12,7 +12,8 @@
     "test:cpi": "tsx --env-file=.env test-cpi-tree.ts",
     "test:report": "tsx --env-file=.env test-report.ts",
     "test:decode": "tsx --env-file=.env test-decode.ts",
-    "test:errors": "tsx --env-file=.env test-errors.ts"
+    "test:errors": "tsx --env-file=.env test-errors.ts",
+    "test:rules": "tsx --env-file=.env test-rules.ts"
   },
   "keywords": [],
   "author": "",

@@ -37,6 +37,7 @@ import { decodeIdlInstruction, type AnchorIdl, type DecodedIdlIx } from "./idl-d
 import { getCachedIdl } from "./idl-cache.js";
 import { decodeNativeIx, type DecodedIx } from "./native-decoders.js";
 import { explainRuntimeError } from "./runtime-errors.js";
+import { runRules, type Finding } from "./rules.js";
 import { findLogHint, parseAnchorError, type AnchorErrorInfo } from "./summary.js";
 
 const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
@@ -186,6 +187,11 @@ export type DebugReport = {
    * wrong answer and a qualified one.
    */
   warnings: string[];
+  /**
+   * What the facts above add up to, from `lib/rules.ts`. Most confident first,
+   * empty when nothing matched — which is an honest outcome, not a gap.
+   */
+  findings: Finding[];
 };
 
 /**
@@ -383,7 +389,7 @@ export async function buildDebugReport(
   // reader to skim past the ones that matter. Renderers explain fee-only
   // movement where they show the movement.
 
-  return {
+  const report: DebugReport = {
     signature,
     slot: tx.slot,
     blockTime: tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : null,
@@ -405,7 +411,13 @@ export async function buildDebugReport(
       }))
     ),
     warnings,
+    // Filled in below: the rules read the finished report, so they see every
+    // fact a renderer would, and can't be given anything a reader can't check.
+    findings: [],
   };
+
+  report.findings = runRules(report);
+  return report;
 }
 
 /**

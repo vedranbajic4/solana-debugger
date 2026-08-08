@@ -42,6 +42,7 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 | `lib/idl-decode.ts` | IDL-driven instruction args and account structs |
 | `lib/runtime-errors.ts` | what the non-custom runtime errors mean, and cause |
 | `lib/field-diff.ts` | named field changes from an IDL, not a byte count |
+| `lib/rules.ts` | facts → diagnosis, each finding citing its evidence |
 | `lib/summary.ts` | Anchor error and log-hint extraction |
 | `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
 | `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
@@ -50,6 +51,7 @@ Four directives that outlive any single file:
 
 - **Keep `fetch-tx.ts` and `replay-tx.ts` printers.** Both render a structure someone else computed (`buildDebugReport()` and `replayTransaction()`). Logic that lands in `replay-tx.ts` is logic `verify-replay.ts` can't measure; logic that lands in `fetch-tx.ts` makes `--json` a different answer from the text.
 - **Keep `fetch-tx.ts`'s two tiers honest.** Default is the summary and what moved; `--verbose` adds the evidence. Anything that changes how much to *trust* the summary — a shaky attribution, truncated logs — rides in `report.warnings` and prints in the summary, never only behind `--verbose`. A section with nothing to say prints no header at all (an earlier version emitted an empty `TOKEN BALANCE DELTAS` whenever a tx merely touched token accounts).
+- **A rule cites its evidence, or it doesn't ship.** `lib/rules.ts` is the one place that says *why* rather than *what*, which makes it the one place that can invent things. Every `Finding` lists the report fields it fired on so a reader can check the reasoning; confidence is `certain` only when the runtime itself said so; and firing on nothing is a fine outcome. The test that matters is the live one — no rule may diagnose a transaction that succeeded.
 - **`report.warnings` is for doubt, not for domain facts.** "A failed transaction moves only the fee" is a fact about Solana and belongs next to the balances; it was briefly a warning, and diluting the warning slot that way trains a reader to skim past the caveats that do matter.
 - **Never guess at an error's meaning.** `lib/errors.ts` degrades to `source: "unknown"` rather than inventing one; when adding error data, extend `lib/program-errors.ts`/`lib/anchor-errors.ts` instead of guessing at the resolver layer. The same rule governs `findFailingProgramInLogs()` (see the CPI gotcha below) and `decodeNativeIx()`, which returns null on an unrecognised discriminant — a confident "Transfer 5 SOL" that's wrong is worse than no answer. `.idl-cache/` is gitignored and disposable; `pruneIdlCache()` throws it away if a cached IDL ever goes stale.
 - **Keep `DebugReport` serializable.** No `bigint`/`Buffer`/`PublicKey`; u64 token amounts are decimal strings, because the report exists to survive JSON, disk, and a diff between runs.
