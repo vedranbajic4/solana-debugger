@@ -1,5 +1,6 @@
 // replay-tx.ts
 import { Connection, VersionedTransaction, VersionedMessage } from "@solana/web3.js";
+import { surfnetCall } from "./lib/surfnet.js";
 
 const MAINNET_RPC = process.env.RPC_URL!;
 const SURFNET_RPC = process.env.SURFNET_RPC ?? "http://127.0.0.1:8899";
@@ -34,15 +35,6 @@ async function replay(signature: string) {
   console.log("replayed :", JSON.stringify(sim.value.err), sim.value.unitsConsumed, "CU");
   console.log("MATCH:", match);
   if (!match) console.log("replayed logs:\n" + (sim.value.logs ?? []).join("\n"));
-}
-
-async function surfnetCall(url: string, method: string, params: any[]) {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  return res.json();
 }
 
 replay(process.argv[2] || "").catch((e) => { console.error(e); process.exit(1); });

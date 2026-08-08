@@ -2,10 +2,11 @@
 # TypeScript & Build Output
 # ==========================================
 # Ignore the directory where TypeScript compiles JavaScript files
+# NOTE: no `lib/` rule here — this project has no build step (tsx runs the .ts
+# files directly) and `solana-debugger/lib/` is hand-written source.
 dist/
 out/
 build/
-lib/
 
 # Ignore TypeScript build cache and incremental compilation data
 *.tsbuildinfo
@@ -34,6 +35,9 @@ typings/
 .env.test.local
 .env.production.local
 *.env
+
+# Scratch CLI output captured while debugging (regenerable via `npm run fetch`)
+demo-*.txt
 
 # ==========================================
 # Logs & Runtime
