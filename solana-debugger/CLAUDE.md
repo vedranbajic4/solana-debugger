@@ -15,6 +15,8 @@ npm run replay <SIGNATURE>              # replay against a local surfnet and dif
 npm run verify                          # replay the whole corpus, report the match rate
 npm run corpus                          # regenerate corpus.json from recent mainnet blocks
 npm run test:archive                    # check lib/archive.ts against a mock archive endpoint
+npm run test:cpi -- --live              # check the log parser against the corpus
+npm run test:report -- --all            # build a DebugReport for every corpus tx
 ```
 
 Note the `--` before `--verbose`: without it npm consumes the flag itself and the script never sees it. Same for `npm run verify -- --only failed`, `-- --limit 5`, `-- -v`, `-- --json`.
@@ -51,6 +53,8 @@ There is no build step (`tsx` runs the `.ts` files directly) and no lint script.
 - **`lib/corpus.ts`** — the `CorpusEntry`/`CorpusFile` types and `CORPUS_PATH`, shared by the corpus builder and the verifier.
 - **`build-corpus.ts`** — entry point for `npm run corpus`. Samples recent mainnet blocks into `corpus.json`, capped at two txs per program and four per block so one busy AMM or one leader's slots can't dominate the match rate. Candidates are ranked by an `interestScore` — token movement and CPIs beat a small account list, because selecting purely for cheap replays fills the corpus with 3-account arbitrage bots that reproduce trivially and prove nothing.
 - **`verify-replay.ts`** — entry point for `npm run verify`. See "Verifying the replay" below.
+- **`lib/cpi-tree.ts`** — rebuilds the runtime's call tree from `meta.logMessages`. `meta.innerInstructions` says which CPIs ran but not how they went: compute consumed, what each program logged, and which frame actually failed live only in the logs. `selfCu` is a frame's consumption minus its children's, so "expensive" means the program's own work rather than its callees'. `deepestFailedFrame()` is the culprit — failure propagates outward, so every frame on the stack reports failed and only the innermost is the origin. Parsing is deliberately tolerant: truncated logs are the common case on exactly the transactions worth debugging, so an unclosed frame becomes `unterminated` rather than discarding the tree.
+- **`lib/report.ts`** — `DebugReport`, the tool's conclusions about one transaction as data. Strictly serializable (base58 strings, decimal strings for u64 token amounts — no `bigint`/`Buffer`/`PublicKey`, since a report should survive JSON, disk, and a diff between runs). Confidence travels with the conclusion: `attribution.basis` records *how* the failing program was identified (`logs` = the runtime's innermost failure line, `top-level-instruction` = a guess that's wrong whenever the failure was inside a CPI), and `warnings` carries caveats a renderer must not bury.
 
 ### Fork fidelity: why `lib/prestate.ts` exists
 

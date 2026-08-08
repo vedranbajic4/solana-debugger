@@ -14,9 +14,19 @@
     Known limit: surfnet_setAccount can update but not create, so accounts
     closed since the tx are unrestorable either way.
 [ ] program pinning at historical slot
-[ ] DebugReport type definition
-[ ] log parser → CPI tree
-[ ] self-CU attribution + deepest-failed-frame
+    BLOCKED, twice: needs the program's bytecode at the tx's slot (same missing
+    archive endpoint as item 2), and writing executable accounts onto the fork
+    breaks its loader, which is why lib/archive.ts skips them.
+[x] DebugReport type definition
+    lib/report.ts. Serializable by construction; attribution basis + warnings
+    travel with the conclusions. Verified on all 20 corpus txs (npm run
+    test:report -- --all): 12 failed, 12 attributed from logs, 2 via CPI.
+[x] log parser → CPI tree
+    lib/cpi-tree.ts, tolerant of truncated logs. Live-checked against the
+    corpus: tree compute reconciles with meta.computeUnitsConsumed.
+[x] self-CU attribution + deepest-failed-frame
+    selfCu = consumed - children; deepestFailedFrame() agrees with
+    findFailingProgramInLogs on every corpus tx that has a failure line.
 [ ] ALT resolution for v0 txs
 [ ] IDL fetch (on-chain PDA + zlib inflate)
 [ ] IDL cache + negative cache
