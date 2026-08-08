@@ -95,6 +95,9 @@ async function main() {
       : `${consumed} CU (no explicit limit set — default applies)`;
 
   const numSigners = message.header.numRequiredSignatures;
+  const baseFee = numSigners * LAMPORTS_PER_SIGNATURE;
+  const priorityFee = meta.fee - baseFee;
+  const logsTruncated = Boolean(meta.logMessages?.some((l) => l.includes("Log truncated")));
 
   const err = meta.err as any;
   const instructionError =
@@ -128,7 +131,8 @@ async function main() {
   section("SUMMARY");
 
   const when = tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : "unknown time";
-  console.log(`${meta.err ? "FAILED" : "SUCCESS"}  slot ${tx.slot}  ${when}`);
+  const version = tx.version === "legacy" ? "legacy" : `v${tx.version}`;
+  console.log(`${meta.err ? "FAILED" : "SUCCESS"}  slot ${tx.slot}  ${version}  ${when}`);
 
   if (meta.err) {
     if (failedIxIndex !== null) {
@@ -161,27 +165,77 @@ async function main() {
     if (anchor?.account) row("account", `${anchor.account}  (constraint that tripped)`);
     if (anchor?.source) row("at", anchor.source);
     if (!anchor && logHint) row("log", logHint);
+
+    // Caveats that change how much to trust the lines above — these have to
+    // survive into the default view, not hide in a section behind --verbose.
+    if (customCode !== null && !fromLogs && failedIx) {
+      row("warning", "no failure line in the logs — 'program' above is the top-level");
+      row("", "one, which is wrong if it failed inside a CPI");
+    }
+    if (logsTruncated) {
+      row("warning", "validator truncated the logs — replay to see the rest");
+    }
   } else {
     row("instructions", `${instructions.length}`);
   }
 
-  row("compute", computeText);
-  row("fee", sol(meta.fee));
+  row(
+    "compute",
+    computeText +
+      (priceMicroLamports !== null ? `, ${priceMicroLamports} microLamports/CU priority` : "")
+  );
+  row("fee", sol(meta.fee) + (priorityFee > 0 ? `  (${priorityFee} of it priority)` : ""));
 
-  if (!meta.err) {
-    const lamportMoves = meta.preBalances.filter(
-      (pre, i) => (meta.postBalances[i] ?? pre) !== pre
-    ).length;
-    const tokenMoves = (meta.postTokenBalances ?? []).filter((post) => {
-      const pre = (meta.preTokenBalances ?? []).find(
-        (b) => b.accountIndex === post.accountIndex
-      );
-      return (pre?.uiTokenAmount.amount ?? "0") !== post.uiTokenAmount.amount;
-    }).length;
-    row("moved", `${lamportMoves} lamport balance(s), ${tokenMoves} token balance(s)`);
+  // ------------------------------------------------------------- WHAT MOVED
+
+  const lamportDeltas: string[] = [];
+  for (let i = 0; i < meta.preBalances.length; i++) {
+    const delta = meta.postBalances[i]! - meta.preBalances[i]!;
+    if (delta === 0) continue;
+    const key = accountKeys.get(i)?.toBase58() ?? `<index ${i}>`;
+    lamportDeltas.push(`  ${key}  ${delta > 0 ? "+" : ""}${delta} lamports`);
   }
 
-  if (!verbose) console.log("\n  (re-run with --verbose for the raw meta dump)");
+  const tokenDeltas: string[] = [];
+  {
+    const pre = new Map((meta.preTokenBalances ?? []).map((b) => [b.accountIndex, b]));
+    for (const post of meta.postTokenBalances ?? []) {
+      const beforeAmt = BigInt(pre.get(post.accountIndex)?.uiTokenAmount.amount ?? "0");
+      const afterAmt = BigInt(post.uiTokenAmount.amount);
+      if (beforeAmt === afterAmt) continue;
+      const key = accountKeys.get(post.accountIndex)?.toBase58() ?? `<index ${post.accountIndex}>`;
+      const diff = afterAmt - beforeAmt;
+      tokenDeltas.push(`  ${key}  mint ${post.mint}  ${diff > 0n ? "+" : ""}${diff}`);
+    }
+  }
+
+  // A failed tx only ever moves the fee, which the summary already reports, so
+  // by default this section would just restate it.
+  if (verbose || !meta.err) {
+    section("BALANCE DELTAS");
+    if (lamportDeltas.length) {
+      for (const line of lamportDeltas) console.log(line);
+    } else {
+      console.log("  (no lamport movement)");
+    }
+    if (meta.err && lamportDeltas.length) {
+      console.log(
+        "\n  note: transaction failed — any movement here is fee only; program state was rolled back"
+      );
+    }
+  }
+
+  // Only worth a header when something actually moved; the old code printed an
+  // empty section whenever the tx merely touched token accounts.
+  if (tokenDeltas.length) {
+    section("TOKEN BALANCE DELTAS");
+    for (const line of tokenDeltas) console.log(line);
+  }
+
+  if (!verbose) {
+    console.log("\n  (--verbose adds logs, instructions, account keys and the raw meta)");
+    return;
+  }
 
   // ---------------------------------------------------------------- STATUS
 
@@ -234,9 +288,6 @@ async function main() {
 
   section("FEE");
 
-  const baseFee = numSigners * LAMPORTS_PER_SIGNATURE;
-  const priorityFee = meta.fee - baseFee;
-
   console.log(`total:    ${sol(meta.fee)}`);
   console.log(`base:     ${sol(baseFee)}  (${numSigners} signature(s) x ${LAMPORTS_PER_SIGNATURE})`);
   console.log(`priority: ${sol(priorityFee)}`);
@@ -244,50 +295,12 @@ async function main() {
     console.log("  note: negative priority fee means the base rate assumption is wrong for this slot");
   }
 
-  // -------------------------------------------------------- BALANCE DELTAS
-
-  section("BALANCE DELTAS");
-
-  let anyDelta = false;
-  for (let i = 0; i < meta.preBalances.length; i++) {
-    const delta = meta.postBalances[i]! - meta.preBalances[i]!;
-    if (delta === 0) continue;
-    anyDelta = true;
-    const key = accountKeys.get(i)?.toBase58() ?? `<index ${i}>`;
-    console.log(`  ${key}  ${delta > 0 ? "+" : ""}${delta} lamports`);
-  }
-  if (!anyDelta) console.log("  (no lamport movement)");
-
-  if (meta.err && anyDelta) {
-    console.log(
-      "\n  note: transaction failed — any movement here is fee only; program state was rolled back"
-    );
-  }
-
-  // --------------------------------------------------------- TOKEN BALANCES
-
-  if ((meta.preTokenBalances?.length ?? 0) > 0 || (meta.postTokenBalances?.length ?? 0) > 0) {
-    section("TOKEN BALANCE DELTAS");
-    const pre = new Map(
-      (meta.preTokenBalances ?? []).map((b) => [`${b.accountIndex}`, b])
-    );
-    for (const post of meta.postTokenBalances ?? []) {
-      const before = pre.get(`${post.accountIndex}`);
-      const beforeAmt = BigInt(before?.uiTokenAmount.amount ?? "0");
-      const afterAmt = BigInt(post.uiTokenAmount.amount);
-      if (beforeAmt === afterAmt) continue;
-      const key = accountKeys.get(post.accountIndex)?.toBase58() ?? `<index ${post.accountIndex}>`;
-      const diff = afterAmt - beforeAmt;
-      console.log(`  ${key}  mint ${post.mint}  ${diff > 0n ? "+" : ""}${diff}`);
-    }
-  }
-
   // ------------------------------------------------------------ LOG MESSAGES
 
   section("LOG MESSAGES");
   if (meta.logMessages?.length) {
     for (const line of meta.logMessages) console.log(line);
-    if (meta.logMessages.some((l) => l.includes("Log truncated"))) {
+    if (logsTruncated) {
       console.log("\n  warning: logs were truncated by the validator — replay to see the rest");
     }
   } else {
