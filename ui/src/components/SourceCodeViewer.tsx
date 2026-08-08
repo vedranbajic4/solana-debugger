@@ -156,12 +156,12 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
         <div className="flex items-center space-x-3 text-rose-400 mb-4">
           <EyeOff className="w-6 h-6 shrink-0" />
           <span className="font-bold text-lg text-rose-300 uppercase tracking-wider">
-            Source Code Not Available
+            ORIGINAL SOURCE UNAVAILABLE - SHOWING HUMAN-READABLE PSEUDOCODE
           </span>
         </div>
         <p className="text-slate-400 text-xs leading-relaxed">
           This program was built as a <span className="text-amber-300">release binary without debug symbols</span>.
-          DWARF <code>.debug_line</code> tables are not present in the deployed ELF.
+          Instead of original Rust source, we are displaying human-readable C-like pseudocode inferred from the sBPF bytecode below.
         </p>
         {failureContext?.failedProgramId && (
           <div className="mt-3 flex items-center space-x-2 text-xs text-slate-500">

@@ -7,6 +7,102 @@ interface PseudocodeViewerProps {
   autoExpand?: boolean;
 }
 
+function highlightC(text: string): React.ReactNode[] {
+  const tokens: { type: string; value: string }[] = [];
+  let idx = 0;
+  while (idx < text.length) {
+    if (text[idx] === '"') {
+      let end = idx + 1;
+      while (end < text.length && text[end] !== '"') {
+        if (text[end] === '\\') end++;
+        end++;
+      }
+      tokens.push({ type: 'string', value: text.slice(idx, end + 1) });
+      idx = end + 1;
+      continue;
+    }
+
+    if (text[idx] === '/' && (text[idx + 1] === '/' || text[idx + 1] === '*')) {
+      let end = idx + 2;
+      if (text[idx + 1] === '/') {
+        while (end < text.length && text[end] !== '\n') end++;
+      } else {
+        while (end < text.length && !(text[end] === '*' && text[end+1] === '/')) end++;
+        if (end < text.length) end += 2;
+      }
+      tokens.push({ type: 'comment', value: text.slice(idx, end) });
+      idx = end;
+      continue;
+    }
+
+    if (/[0-9]/.test(text[idx]) && (idx === 0 || /[\s(,=+\-*/<>!&|^~\[]/.test(text[idx - 1]))) {
+      let end = idx;
+      while (end < text.length && /[0-9a-fA-FxX_.]/.test(text[end])) end++;
+      tokens.push({ type: 'number', value: text.slice(idx, end) });
+      idx = end;
+      continue;
+    }
+
+    if (/[a-zA-Z_]/.test(text[idx])) {
+      let end = idx;
+      while (end < text.length && /[a-zA-Z0-9_]/.test(text[end])) end++;
+      const word = text.slice(idx, end);
+
+      const kwSet = new Set([
+        'if', 'else', 'return', 'while', 'for', 'do', 'break', 'continue', 'switch', 'case', 'default', 'goto', 'sizeof'
+      ]);
+      const typeSet = new Set([
+        'void', 'int', 'char', 'long', 'short', 'unsigned', 'float', 'double', 'bool',
+        'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'int8_t', 'int16_t', 'int32_t', 'int64_t',
+        'Pubkey', 'AccountInfo', 'AccountMeta', 'SolInstruction', 'AccountContext', 'struct', 'typedef', 'union', 'enum'
+      ]);
+
+      if (kwSet.has(word)) {
+        tokens.push({ type: 'keyword', value: word });
+      } else if (typeSet.has(word)) {
+        tokens.push({ type: 'type', value: word });
+      } else {
+        // Look ahead to see if it's a function call
+        let isCall = false;
+        let peek = end;
+        while (peek < text.length && /\s/.test(text[peek])) peek++;
+        if (peek < text.length && text[peek] === '(') {
+          isCall = true;
+        }
+        tokens.push({ type: isCall ? 'function' : 'ident', value: word });
+      }
+      idx = end;
+      continue;
+    }
+
+    tokens.push({ type: 'plain', value: text[idx] });
+    idx++;
+  }
+
+  return tokens.map((tok, i) => {
+    switch (tok.type) {
+      case 'keyword':
+        return <span key={i} style={{ color: '#c792ea' }}>{tok.value}</span>;
+      case 'type':
+        return <span key={i} style={{ color: '#ffcb6b' }}>{tok.value}</span>;
+      case 'function':
+        return <span key={i} style={{ color: '#82aaff' }}>{tok.value}</span>;
+      case 'string':
+        return <span key={i} style={{ color: '#c3e88d' }}>{tok.value}</span>;
+      case 'comment':
+        return <span key={i} style={{ color: '#546e7a', fontStyle: 'italic' }}>{tok.value}</span>;
+      case 'number':
+        return <span key={i} style={{ color: '#f78c6c' }}>{tok.value}</span>;
+      default:
+        // Identify known variable patterns like param_, var_, local_ for dimming
+        if (tok.value.startsWith('param_') || tok.value.startsWith('local_') || tok.value.startsWith('uVar') || tok.value.startsWith('iVar') || tok.value.startsWith('lVar') || tok.value.startsWith('puVar') || tok.value.startsWith('plVar')) {
+           return <span key={i} style={{ color: '#7a8899' }}>{tok.value}</span>;
+        }
+        return <span key={i}>{tok.value}</span>;
+    }
+  });
+}
+
 export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext, autoExpand = false }) => {
   const [isOpen, setIsOpen] = useState(autoExpand);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,7 +211,7 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
                         inHighlightBlock ? 'bg-rose-900/30 text-rose-200 border-l-2 border-rose-500' : 'hover:bg-white/5 border-l-2 border-transparent'
                       }`}
                     >
-                      {line}
+                      {highlightC(line)}
                     </div>
                   );
                 });
