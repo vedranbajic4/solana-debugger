@@ -55,6 +55,9 @@ pub struct FailureContext {
     pub failed_program_id: Option<String>,
     pub failed_instruction_index: Option<u32>,
     pub source_location: Option<SourceLocationInfo>,
+    pub runtime_pc: Option<u64>,
+    pub elf_address: Option<u64>,
+    pub function: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

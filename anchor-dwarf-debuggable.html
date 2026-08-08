@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Verified toolchain note on producing DWARF debug info from Anchor/Solana sBPF builds: the recipe, the traps, and what it costs.">
+<title>Debuggable Anchor Builds — DWARF on sBPF</title>
+<style>
+  :root {
+    --paper:    #eceff4;
+    --panel:    #ffffff;
+    --sunk:     #e2e7ee;
+    --ink:      #131a1f;
+    --ink-soft: #4e5a66;
+    --ink-faint:#7d8894;
+    --rule:     #cdd5df;
+    --accent:   #c06a12;
+    --accent-b: #f6e6d2;
+    --bad:      #c0392b;
+    --bad-b:    #f8e3e0;
+    --good:     #2c7a58;
+    --good-b:   #dff0e7;
+    --term-bg:  #182029;
+    --term-fg:  #d5dde6;
+
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --measure: 68ch;
+    --s1: 0.5rem; --s2: 0.875rem; --s3: 1.375rem; --s4: 2.25rem; --s5: 3.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:    #0f151b;
+      --panel:    #171f27;
+      --sunk:     #1d262f;
+      --ink:      #dde4ec;
+      --ink-soft: #9aa7b4;
+      --ink-faint:#6b7784;
+      --rule:     #2a343e;
+      --accent:   #e09242;
+      --accent-b: #2e2317;
+      --bad:      #e2705f;
+      --bad-b:    #2f1d1a;
+      --good:     #5fb98d;
+      --good-b:   #16281f;
+      --term-bg:  #0a0f14;
+      --term-fg:  #cbd5df;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:    #0f151b;
+    --panel:    #171f27;
+    --sunk:     #1d262f;
+    --ink:      #dde4ec;
+    --ink-soft: #9aa7b4;
+    --ink-faint:#6b7784;
+    --rule:     #2a343e;
+    --accent:   #e09242;
+    --accent-b: #2e2317;
+    --bad:      #e2705f;
+    --bad-b:    #2f1d1a;
+    --good:     #5fb98d;
+    --good-b:   #16281f;
+    --term-bg:  #0a0f14;
+    --term-fg:  #cbd5df;
+  }
+  :root[data-theme="light"] {
+    --paper:    #eceff4;
+    --panel:    #ffffff;
+    --sunk:     #e2e7ee;
+    --ink:      #131a1f;
+    --ink-soft: #4e5a66;
+    --ink-faint:#7d8894;
+    --rule:     #cdd5df;
+    --accent:   #c06a12;
+    --accent-b: #f6e6d2;
+    --bad:      #c0392b;
+    --bad-b:    #f8e3e0;
+    --good:     #2c7a58;
+    --good-b:   #dff0e7;
+    --term-bg:  #182029;
+    --term-fg:  #d5dde6;
+  }
+
+  * { box-sizing: border-box; }
+  dl, dd, figure, blockquote { margin: 0; }
+  pre { margin: 0; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: var(--s4) var(--s3) var(--s5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s5);
+  }
+
+  .col { max-width: var(--measure); }
+
+  /* ---------- type ---------- */
+  h1, h2, h3 { font-family: var(--mono); font-weight: 700; text-wrap: balance; margin: 0; }
+  h1 {
+    font-size: clamp(1.9rem, 5.2vw, 3.1rem);
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+  h2 {
+    font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+  h3 {
+    font-size: 1.02rem;
+    letter-spacing: -0.012em;
+  }
+  p { margin: 0; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+
+  .lede { font-size: 1.14rem; color: var(--ink-soft); }
+  .note { font-size: 0.9rem; color: var(--ink-soft); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--sunk);
+    padding: 0.1em 0.36em;
+    border-radius: 3px;
+    word-break: break-word;
+  }
+
+  /* ---------- structure ---------- */
+  header.masthead {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: var(--s3);
+  }
+  .meta-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s1) var(--s3);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+  .meta-strip b { color: var(--ink-soft); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: var(--s3); }
+  .head { display: flex; flex-direction: column; gap: var(--s1); }
+  .stack { display: flex; flex-direction: column; gap: var(--s2); }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+  .panel.rail-accent { border-left: 4px solid var(--accent); }
+  .panel.rail-bad    { border-left: 4px solid var(--bad); }
+  .panel.rail-good   { border-left: 4px solid var(--good); }
+
+  .verdict {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: var(--s3);
+    display: grid;
+    gap: var(--s2);
+  }
+  .verdict .big {
+    font-family: var(--mono);
+    font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2em 0.62em;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.good { background: var(--good-b); color: var(--good); }
+  .pill.bad  { background: var(--bad-b);  color: var(--bad); }
+  .pill.warn { background: var(--accent-b); color: var(--accent); }
+
+  /* ---------- terminal ---------- */
+  .term {
+    background: var(--term-bg);
+    color: var(--term-fg);
+    border-radius: 8px;
+    padding: var(--s2) var(--s3);
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.84rem;
+    line-height: 1.65;
+  }
+  .term pre { margin: 0; }
+  .term .c { color: #7f8f9e; }
+  .term .k { color: #e09242; font-weight: 600; }
+  .term .g { color: #6cc79a; }
+  .term .r { color: #e2705f; }
+
+  /* ---------- steps ---------- */
+  .steps { display: flex; flex-direction: column; gap: var(--s3); counter-reset: step; }
+  .step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--s2) var(--s3);
+    align-items: start;
+  }
+  .step-n {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--paper);
+    background: var(--ink);
+    border-radius: 999px;
+    padding: 0.28em 0.75em;
+    white-space: nowrap;
+    margin-top: 0.18rem;
+  }
+  .step-body { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+
+  /* ---------- section map diagram ---------- */
+  .maps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--s3);
+  }
+  .map { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
+  .map-title {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s1);
+  }
+  .secs { display: flex; flex-direction: column; gap: 3px; }
+  .sec {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    padding: 0.32em 0.6em;
+    border-radius: 4px;
+    background: var(--sunk);
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    gap: var(--s2);
+  }
+  .sec.dbg { background: var(--accent-b); color: var(--accent); font-weight: 600; }
+  .sec.absent { opacity: 0.42; text-decoration: line-through; }
+
+  /* ---------- tables ---------- */
+  .scroll { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: right;
+    padding: 0.6em 0.7em;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ink-faint);
+    font-weight: 600;
+    border-bottom: 2px solid var(--ink);
+  }
+  tbody td { font-family: var(--mono); }
+  tbody tr.pick td { background: var(--accent-b); }
+  tbody tr.pick td:first-child { font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+  .cap { font-size: 0.82rem; color: var(--ink-faint); }
+
+  /* ---------- misc ---------- */
+  ul.tight { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.tight li::marker { color: var(--ink-faint); }
+
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem var(--s3); font-size: 0.88rem; }
+  .kv dt { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); white-space: nowrap; }
+  .kv dd { margin: 0; color: var(--ink-soft); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+
+  @media (max-width: 34rem) {
+    body { font-size: 16px; }
+    .wrap { padding: var(--s3) var(--s2) var(--s4); }
+    .step { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="col stack">
+      <span class="label">Solana&nbsp;/&nbsp;sBPF toolchain note</span>
+      <h1>Making Anchor programs debuggable</h1>
+      <p class="lede">Stock Anchor builds ship zero debug information. The compiler emits perfectly good DWARF — two separate mechanisms throw it away before you ever see it. Here is what to change, and what it costs.</p>
+    </div>
+    <div class="meta-strip">
+      <span><b>platform-tools</b> v1.52</span>
+      <span><b>cargo-build-sbf</b> 3.1.9</span>
+      <span><b>rustc</b> 1.89.0-dev</span>
+      <span><b>anchor-lang</b> 0.32.1</span>
+      <span><b>anchor-cli</b> 0.31.1</span>
+      <span><b>target</b> sbpf-solana-solana</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="col verdict">
+      <span class="label">The short version</span>
+      <p class="big">Set <code>debug = 2</code> and <code>strip = "none"</code> in the release profile, then build with <code>--debug --disable-remap-cwd</code>. Neither change alone is sufficient.</p>
+      <p class="note">Every claim on this page was measured against a built artifact, not inferred from documentation. Where something was not verified, it says so.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">Why it disappears</span>
+      <h2>Two independent strippers</h2>
+    </div>
+    <div class="col stack">
+      <p>A default <code>anchor build</code> produces a <code>.so</code> with nine sections and zero symbols. Nothing in it can support a source-level debugger.</p>
+      <div class="panel">
+        <h3>1 &nbsp;Cargo strips at link time</h3>
+        <p class="note">Cargo injects <code>-C strip=debuginfo</code> whenever the profile has <code>debug = 0</code>. The release profile does, so the DWARF the compiler already produced is deleted during the final link. This is why setting <code>debug = 2</code> without <code>strip = "none"</code> still gets you nothing.</p>
+      </div>
+      <div class="panel">
+        <h3>2 &nbsp;cargo-build-sbf post-processes the deploy copy</h3>
+        <p class="note">The artifact written to <code>target/deploy/</code> is run through <code>strip.sh</code>. Anything left is split out to <code>&lt;name&gt;.debug</code> with <code>llvm-objcopy --only-keep-debug</code>. The unstripped binary lives at <code>target/sbpf-solana-solana/release/&lt;name&gt;.so</code>.</p>
+      </div>
+      <p class="note">Setting <code>RUSTFLAGS</code> yourself does not help: <code>cargo-build-sbf</code> explicitly discards your <code>RUSTFLAGS</code> and substitutes its own through <code>CARGO_TARGET_&lt;TRIPLE&gt;_RUSTFLAGS</code>.</p>
+    </div>
+
+    <div class="panel">
+      <span class="label">ELF section map — same program, three build configurations</span>
+      <div class="maps">
+        <div class="map">
+          <div class="map-title">Stock <code>anchor build</code> <span class="pill bad">no debug info</span></div>
+          <div class="secs">
+            <div class="sec"><span>.text</span><span>0x23958</span></div>
+            <div class="sec"><span>.rodata</span><span>0x3688</span></div>
+            <div class="sec"><span>.data.rel.ro</span><span></span></div>
+            <div class="sec"><span>.dynamic</span><span></span></div>
+            <div class="sec"><span>.dynsym / .dynstr</span><span></span></div>
+            <div class="sec"><span>.rel.dyn</span><span></span></div>
+            <div class="sec absent"><span>.symtab</span><span>—</span></div>
+            <div class="sec absent"><span>.debug_*</span><span>—</span></div>
+          </div>
+          <p class="cap">9 sections, 0 symbols.</p>
+        </div>
+        <div class="map">
+          <div class="map-title"><code>--debug</code> only <span class="pill warn">symbols, still no DWARF</span></div>
+          <div class="secs">
+            <div class="sec"><span>.text</span><span>0x23a98</span></div>
+            <div class="sec"><span>.rodata</span><span>0x3a70</span></div>
+            <div class="sec"><span>.data.rel.ro</span><span></span></div>
+            <div class="sec"><span>.dynamic</span><span></span></div>
+            <div class="sec"><span>.dynsym / .dynstr</span><span></span></div>
+            <div class="sec"><span>.rel.dyn</span><span></span></div>
+            <div class="sec"><span>.symtab</span><span>30,246</span></div>
+            <div class="sec absent"><span>.debug_*</span><span>—</span></div>
+          </div>
+          <p class="cap">Produces a 783&nbsp;KB <code>.debug</code> file containing function names and nothing else.</p>
+        </div>
+        <div class="map">
+          <div class="map-title">Profile + <code>--debug</code> <span class="pill good">full DWARF</span></div>
+          <div class="secs">
+            <div class="sec"><span>.text</span><span>0x23a98</span></div>
+            <div class="sec"><span>.rodata</span><span>0x3a70</span></div>
+            <div class="sec"><span>.data.rel.ro</span><span></span></div>
+            <div class="sec"><span>.symtab</span><span>30,246</span></div>
+            <div class="sec dbg"><span>.debug_info</span><span></span></div>
+            <div class="sec dbg"><span>.debug_line</span><span></span></div>
+            <div class="sec dbg"><span>.debug_loc</span><span></span></div>
+            <div class="sec dbg"><span>.debug_ranges</span><span></span></div>
+            <div class="sec dbg"><span>.debug_frame / abbrev / aranges / str</span><span></span></div>
+          </div>
+          <p class="cap">5.0&nbsp;MB <code>.debug</code> file, 22 compile units.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">The recipe</span>
+      <h2>Two changes</h2>
+    </div>
+    <div class="steps">
+
+      <div class="step">
+        <span class="step-n">STEP 1</span>
+        <div class="step-body">
+          <h3>Workspace <code>Cargo.toml</code></h3>
+          <div class="term"><pre>[profile.release]
+overflow-checks = true
+lto = "fat"          <span class="c"># keep whatever you had</span>
+codegen-units = 1
+<span class="k">debug = 2</span>            <span class="c"># emit DWARF</span>
+<span class="k">strip = "none"</span>       <span class="c"># stop cargo deleting it at link time</span></pre></div>
+          <p class="note"><code>strip = "none"</code> is not redundant. Without it, cargo's implicit <code>-C strip=debuginfo</code> removes everything <code>debug = 2</code> just produced.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-n">STEP 2</span>
+        <div class="step-body">
+          <h3>Build command</h3>
+          <div class="term"><pre>anchor build <span class="k">--no-idl</span> -- <span class="k">--debug --disable-remap-cwd</span></pre></div>
+          <dl class="kv">
+            <dt>--debug</dt>
+            <dd>Splits DWARF into <code>target/deploy/&lt;name&gt;.debug</code>. Without it you still get DWARF, but only inside <code>target/sbpf-solana-solana/release/&lt;name&gt;.so</code>.</dd>
+            <dt>--disable-remap-cwd</dt>
+            <dd>Preserves an absolute <code>DW_AT_comp_dir</code> so source lookup resolves. The default remaps it away and your debugger will not find the files.</dd>
+            <dt>--no-idl</dt>
+            <dd>Required — see the trap below.</dd>
+          </dl>
+          <p class="note">Plain <code>cargo-build-sbf --debug --disable-remap-cwd</code> works identically and sidesteps the IDL problem entirely.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">Traps</span>
+      <h2>Three things that look right and are not</h2>
+    </div>
+    <div class="stack">
+
+      <div class="panel rail-bad">
+        <h3><code>--debug</code> on its own does nothing useful</h3>
+        <p class="note">The flag is documented as “Enable debug symbols”, which reads like it is the whole answer. It is not. Building with it alone adds 30,246 entries to <code>.symtab</code> and writes a 783&nbsp;KB <code>&lt;name&gt;.debug</code> file — containing <strong>no <code>.debug_*</code> sections at all</strong>. Function names only. The profile change in Step 1 is what actually produces DWARF.</p>
+      </div>
+
+      <div class="panel rail-bad">
+        <h3><code>anchor build -- --debug</code> fails after the program builds</h3>
+        <p class="note">Anchor forwards trailing arguments to <code>cargo build-sbf</code> — that part works, and you get a correct binary with all 22 compile units. It then reuses the <em>same</em> arguments for the <code>cargo test</code> invocation behind IDL generation, which rejects <code>--debug</code> and fails the build:</p>
+        <div class="term"><pre><span class="r">Error: Building IDL failed.</span> Run `ANCHOR_LOG=true anchor idl build` to see the logs.</pre></div>
+        <p class="note">Use <code>--no-idl</code> and generate the IDL separately with <code>anchor idl build</code>.</p>
+      </div>
+
+      <div class="panel rail-bad">
+        <h3>Do not reach for <code>opt-level = 0</code></h3>
+        <p class="note">The instinctive move to improve debuggability breaks sBPF. It overflows the 4&nbsp;KB stack frame limit in six places, including inside Anchor's own generated dispatch:</p>
+        <div class="term"><pre><span class="r">Stack offset of 13152 exceeded max offset of 4096 by 9056 bytes</span>  sha512_digest_block_u64
+<span class="r">Stack offset of  9108 exceeded max offset of 4096 by 5012 bytes</span>  sha256_digest_block_u32
+<span class="r">Stack offset of  4568 exceeded max offset of 4096 by  472 bytes</span>  vault::__private::__idl::__idl_dispatch</pre></div>
+        <p class="note"><code>.text</code> also grows 2.4× (0x23a98 → 0x55c60). A LiteSVM suite still passed on this build, but only because a toy program never calls the overflowing functions — a real program hits undefined behavior at runtime.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">Measurements</span>
+      <h2>What the optimization settings cost you</h2>
+    </div>
+    <p class="col note">Three configurations, same program, all built successfully and all passed the same four-test LiteSVM suite.</p>
+    <div class="panel">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>.text</th>
+              <th>Line rows</th>
+              <th>Vars w/ location</th>
+              <th>Stack errors</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>lto="fat", cu=1, opt 3</td>
+              <td>0x23a98</td>
+              <td>31,154</td>
+              <td>30,708</td>
+              <td>0</td>
+            </tr>
+            <tr class="pick">
+              <td>lto=false, cu=16, opt 1</td>
+              <td>0x231a8</td>
+              <td>36,300</td>
+              <td>36,562</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>lto=false, cu=16, opt 0</td>
+              <td>0x55c60</td>
+              <td>51,013</td>
+              <td>17,728</td>
+              <td>6</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap">Highlighted row is the recommended configuration: roughly 17% more line-table rows and 19% more variables with live locations than the fat-LTO default, no stack errors, and a <code>.text</code> that came out marginally <em>smaller</em>.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">Design constraint</span>
+      <h2>Debug info changes the bytecode</h2>
+    </div>
+    <div class="col stack">
+      <p>This is the part worth designing around. Enabling debug information does not merely annotate the binary — it perturbs codegen. Three clean-room builds of identical source produced three different <code>.text</code> sections:</p>
+      <div class="term"><pre>stock                     0x23958   <span class="c">sha256</span> 89e8635c…
+debug=2 / strip=none      0x23a98   <span class="c">sha256</span> d9c55d64…
+debug=2 + --debug         0x23a98   <span class="c">sha256</span> b93f563c…</pre></div>
+      <p>Isolated with separate <code>CARGO_TARGET_DIR</code>s, so this is not the cwd-remap flag — it is debug information affecting inlining under LTO.</p>
+      <div class="panel rail-accent">
+        <p class="note"><strong>Consequence:</strong> debug info is only valid against the artifact it was built with, and that artifact's hash will not match a verifiable release build. Any tool consuming these should refuse to load a <code>.debug</code> against a mismatched <code>.so</code> rather than display subtly wrong line numbers.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">What you get</span>
+      <h2>DWARF quality</h2>
+    </div>
+    <div class="col stack">
+      <p>Good enough for real source-level debugging, including through Anchor's macro-generated code.</p>
+      <ul class="tight">
+        <li><strong>DWARF version 4</strong> — sections are <code>.debug_loc</code> and <code>.debug_ranges</code>, <em>not</em> the v5 <code>.debug_loclists</code> / <code>.debug_rnglists</code>. Matters if you are writing a parser.</li>
+        <li>22 compile units, 31,154 line-table rows, 7,062 subprograms (3,933 with concrete addresses; the rest inlined).</li>
+        <li>Location lists with register pieces: <code>DW_OP_reg3, DW_OP_piece 0x8, DW_OP_reg4, DW_OP_piece 0x8</code>.</li>
+        <li><code>DW_AT_frame_base (DW_OP_reg10)</code> — the sBPF frame pointer.</li>
+        <li>Typed parameters resolve properly: <code>solana_pubkey::Pubkey *</code>, <code>&amp;[solana_account_info::AccountInfo]</code>.</li>
+        <li>Anchor handlers are attributed to real source. A <code>#[program]</code> function appears as <code>vault::__private::__global::deposit</code> with <code>decl_file</code> and <code>decl_line</code> pointing at your <code>lib.rs</code>, and macro-expansion closures as <code>{closure#0}</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="col head">
+      <span class="label">Before you build anything</span>
+      <h2>Prior art and tooling gaps</h2>
+    </div>
+    <div class="col stack">
+      <div class="panel rail-good">
+        <h3><code>solana-lldb</code> already ships</h3>
+        <p class="note">Found at <code>~/.cache/solana/&lt;ver&gt;/platform-tools/llvm/bin/</code>. It is an LLDB wrapper that preloads <code>solana_lookup.py</code>, registering type summaries for <code>solana_program::pubkey::Pubkey</code> and <code>AccountInfo</code>, alongside the standard Rust providers. Worth reading before duplicating it.</p>
+      </div>
+      <div class="panel">
+        <h3>What is <em>not</em> in platform-tools</h3>
+        <p class="note"><code>llvm-dwarfdump</code> is absent — use a system copy. Present: <code>lldb</code>, <code>llvm-objcopy</code>, <code>llvm-readelf</code>, <code>llvm-objdump</code>, <code>llvm-ar</code>, <code>clang</code>, <code>ld.lld</code>.</p>
+      </div>
+      <div class="panel rail-accent">
+        <h3 style="color: var(--accent)">Unverified — confirm before relying on it</h3>
+        <p class="note">How DWARF addresses (ELF virtual addresses, <code>.text</code> based at <code>0x120</code>) map onto the runtime program counter in rbpf, where text is mapped at <code>MM_PROGRAM_START</code> and the pc is an instruction index. A translation layer is needed here; check it against the rbpf source rather than assuming <code>text_vaddr + pc * 8</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="col stack">
+      <span class="label">Method</span>
+      <p class="note">Findings were produced by building a real Anchor program under each configuration in isolated target directories, inspecting the resulting ELF and DWARF with <code>llvm-readelf</code> and <code>llvm-dwarfdump</code>, and executing each artifact through a LiteSVM test suite. Section sizes, symbol counts, DWARF entry counts and hashes on this page are measured values from those builds.</p>
+      <p class="note">Numbers are from one small program; absolute counts will differ for yours. The relative comparisons and the behaviour of each flag are what transfer.</p>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

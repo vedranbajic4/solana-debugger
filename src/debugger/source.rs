@@ -28,7 +28,7 @@ impl SourceFetcher {
             let lines: Vec<&str> = source_text.lines().collect();
             let total_lines = lines.len() as u64;
 
-            if error_line == 0 || error_line > total_lines {
+            if error_line > total_lines {
                 return SourceContext {
                     available: true,
                     file_name: Some(Self::short_file_name(file_path)),
@@ -37,9 +37,12 @@ impl SourceFetcher {
                 };
             }
 
-            // Extract a window of ±10 lines around the error
-            let window_start = if error_line > 10 { error_line - 10 } else { 1 };
-            let window_end = (error_line + 10).min(total_lines);
+            // If error_line is 0, we want to return the whole file for successful transactions
+            let (window_start, window_end) = if error_line == 0 {
+                (1, total_lines)
+            } else {
+                (if error_line > 10 { error_line - 10 } else { 1 }, (error_line + 10).min(total_lines))
+            };
 
             let mut source_lines = Vec::new();
             for line_num in window_start..=window_end {
@@ -126,6 +129,12 @@ impl SourceFetcher {
                         return Some(content);
                     }
                 }
+            }
+
+            // Strategy 5: Walk the ENTIRE workspace root as a fallback (ignoring heavy dirs)
+            let base = PathBuf::from(root);
+            if let Some(content) = Self::search_dir_recursive(&base, file_path) {
+                return Some(content);
             }
         }
 

@@ -13,6 +13,7 @@ use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
+use object::{Object, ObjectSection};
 
 #[path = "../debugger/mod.rs"]
 mod debugger;
@@ -179,23 +180,45 @@ fn main() -> Result<()> {
     if analysis.execution_status.contains("FAILED") {
         let failed_program_id = AnchorDecoder::extract_failed_program_from_logs(&logs);
 
-        // Extract instruction index from error pattern in logs
-        let failed_instruction_index = logs.iter().rev().find_map(|log| {
-            // Pattern: "Program ... failed: ..."
-            if log.contains("failed:") {
-                // The instruction index can be inferred from the log ordering
-                // For now extract from TransactionError if available
-                None
-            } else {
-                None
+        let mut failed_instruction_index = None;
+        if let Some(meta) = &tx_meta.transaction.meta {
+            if let Some(err) = &meta.err {
+                let err_str = format!("{:?}", err);
+                if err_str.starts_with("InstructionError(") {
+                    if let Some(idx_str) = err_str.strip_prefix("InstructionError(").and_then(|s| s.split(',').next()) {
+                        if let Ok(idx) = idx_str.parse::<u32>() {
+                            failed_instruction_index = Some(idx);
+                        }
+                    }
+                }
             }
-        });
+        }
 
         let mut failure_ctx = FailureContext {
             failed_program_id: failed_program_id.clone(),
             failed_instruction_index: failed_instruction_index,
             source_location: None,
+            runtime_pc: None,
+            elf_address: None,
+            function: None,
         };
+
+        // Extract runtime PC if logged (e.g. Memory violation or Panic)
+        for log in &logs {
+            if let Some(idx) = log.find("instruction #") {
+                let rest = &log[idx + "instruction #".len()..];
+                let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if let Ok(pc) = num_str.parse::<u64>() {
+                    failure_ctx.runtime_pc = Some(pc);
+                }
+            } else if let Some(idx) = log.find(" at PC ") {
+                let rest = &log[idx + " at PC ".len()..];
+                let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if let Ok(pc) = num_str.parse::<u64>() {
+                    failure_ctx.runtime_pc = Some(pc);
+                }
+            }
+        }
 
         // Fallback: Anchor prints exact file and line in logs! Let's extract it.
         for log in &logs {
@@ -247,6 +270,15 @@ fn main() -> Result<()> {
                             }
                         } else {
                             // No DWARF debug info — program is a stripped release build
+                        }
+                        
+                        if let Some(pc) = failure_ctx.runtime_pc {
+                            if let Ok(obj) = object::File::parse(&account.data[..]) {
+                                if let Some(text_section) = obj.section_by_name(".text") {
+                                    let elf_address = text_section.address() + (pc * 8);
+                                    failure_ctx.elf_address = Some(elf_address);
+                                }
+                            }
                         }
                     }
                 }
@@ -382,21 +414,112 @@ fn main() -> Result<()> {
         }
     }
 
+    // --- SUCCESSFUL TRANSACTION SOURCE CODE FALLBACK ---
+    if analysis.source_context.is_none() {
+        println!("🔎 Attempting successful transaction source code fallback...");
+        for pid in &program_ids {
+            let pid_str = pid.to_string();
+            if pid_str == "11111111111111111111111111111111" || pid_str == "ComputeBudget111111111111111111111111111111" {
+                continue;
+            }
+
+            println!("🔎 Fetching account for PID: {}", pid_str);
+            if let Ok(mut account) = rpc_client.get_account(pid) {
+                // If it's an upgradeable program, fetch ProgramData instead
+                if account.owner.to_string() == "BPFLoaderUpgradeab1e11111111111111111111111" && account.data.len() >= 36 && account.data[0..4] == [2, 0, 0, 0] {
+                    let mut programdata_addr = [0u8; 32];
+                    programdata_addr.copy_from_slice(&account.data[4..36]);
+                    let pd_key = Pubkey::new_from_array(programdata_addr);
+                    if let Ok(pd_account) = rpc_client.get_account(&pd_key) {
+                        account = pd_account;
+                    }
+                }
+
+                // Find ELF start offset (ProgramData has a header)
+                let elf_offset = account.data.windows(4).position(|window| window == b"\x7fELF").unwrap_or(0);
+                if elf_offset < account.data.len() && account.data[elf_offset..].len() > 4 && &account.data[elf_offset..elf_offset+4] == b"\x7fELF" {
+                    let elf_bytes = &account.data[elf_offset..];
+                    println!("🔎 Parsed ELF for PID: {}", pid_str);
+                    let dwarf = DwarfLineMapper::parse_elf(elf_bytes).unwrap_or_else(|_| DwarfLineMapper::new());
+                    println!("🔎 Mappings count: {}", dwarf.mappings_count());
+                    if dwarf.mappings_count() > 0 {
+                        if let Some(file_path) = dwarf.get_first_file() {
+                            println!("🔎 First file found: {}", file_path);
+                            let workspace_root = env::current_dir().ok().map(|p| p.to_string_lossy().to_string());
+                            let source_ctx = SourceFetcher::fetch_source_context(
+                                &file_path,
+                                0, // 0 will return the whole file
+                                workspace_root.as_deref(),
+                                Some(&pid_str),
+                            );
+                            
+                            analysis.source_context = Some(source_ctx);
+                            break;
+                        } else {
+                            println!("🔎 First file was None!");
+                        }
+                    } else {
+                        println!("🔎 No DWARF mappings! Guessing Anchor file path...");
+                        let program_label = debugger::AnchorDecoder::get_program_label(&pid_str);
+                        let guessed_path = format!("programs/{}/src/lib.rs", program_label);
+                        let workspace_root = env::current_dir().ok().map(|p| p.to_string_lossy().to_string());
+                        let source_ctx = SourceFetcher::fetch_source_context(
+                            &guessed_path,
+                            0,
+                            workspace_root.as_deref(),
+                            Some(&pid_str),
+                        );
+                        
+                        if source_ctx.available || !source_ctx.source_lines.is_empty() {
+                            analysis.source_context = Some(source_ctx);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     writeln!(out_file, "\n==================================================================================================")?;
     writeln!(out_file, "SBF BYTECODE DISASSEMBLY STREAM (PROGRAM BY PROGRAM)")?;
     writeln!(out_file, "==================================================================================================")?;
 
     for pid in program_ids {
         writeln!(out_file, "\n📍 PROGRAM ID: {}", pid)?;
-        let fetched_account = rpc_client.get_account(&pid).ok();
+        let mut fetched_account = rpc_client.get_account(&pid).ok();
 
-        let is_elf = fetched_account
-            .as_ref()
-            .map(|a| a.data.len() > 4 && &a.data[0..4] == b"\x7fELF")
-            .unwrap_or(false);
+        // Handle BPF Upgradeable Loader
+        if let Some(ref acc) = fetched_account {
+            if acc.owner.to_string() == "BPFLoaderUpgradeab1e11111111111111111111111" && acc.data.len() >= 36 && acc.data[0..4] == [2, 0, 0, 0] {
+                let mut programdata_addr = [0u8; 32];
+                programdata_addr.copy_from_slice(&acc.data[4..36]);
+                let pd_key = Pubkey::new_from_array(programdata_addr);
+                if let Ok(pd_account) = rpc_client.get_account(&pd_key) {
+                    fetched_account = Some(pd_account);
+                }
+            }
+        }
+
+        let mut elf_bytes_vec = Vec::new();
+        let is_elf = if let Some(ref acc) = fetched_account {
+            if let Some(elf_offset) = acc.data.windows(4).position(|window| window == b"\x7fELF") {
+                elf_bytes_vec = acc.data[elf_offset..].to_vec();
+                
+                // Write ELF to disk for Ghidra decompilation
+                let so_path = format!("{}.so", pid);
+                std::fs::write(&so_path, &elf_bytes_vec).unwrap_or_default();
+                println!("✅ Saved ELF to: {}", so_path);
+                
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         let (elf_bytes, is_native) = if is_elf {
-            (fetched_account.unwrap().data, false)
+            (elf_bytes_vec, false)
         } else {
             // Built-in or loader account; fallback to full SBF bytecode disassembly stream
             (
@@ -466,6 +589,15 @@ fn main() -> Result<()> {
                 "PC [{:04}] | {:<23} | {:<25} | {}",
                 inst.pc, hex_bytes, inst.assembly, loc_str
             )?;
+        }
+    }
+
+    if let Some(mut failure_ctx) = analysis.failure_context.clone() {
+        if let Some(idx) = failure_ctx.failed_instruction_index {
+            if let Some(decoded_ix) = analysis.decoded_instructions.get(idx as usize) {
+                failure_ctx.function = Some(decoded_ix.name.clone());
+                analysis.failure_context = Some(failure_ctx);
+            }
         }
     }
 
