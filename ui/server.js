@@ -168,6 +168,24 @@ app.get('/api/pseudocode/:programId', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Program ID is required' });
   }
 
+  const NATIVE_PROGRAMS = {
+    'ComputeBudget111111111111111111111111111111': 'Compute Budget',
+    '11111111111111111111111111111111': 'System Program',
+    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'SPL Token',
+    'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL': 'SPL Associated Token',
+    'Config1111111111111111111111111111111111111': 'Config Program',
+    'Stake11111111111111111111111111111111111111': 'Stake Program',
+    'Vote111111111111111111111111111111111111111': 'Vote Program',
+    'BPFLoaderUpgradeab1e11111111111111111111111': 'BPF Upgradeable Loader'
+  };
+
+  if (NATIVE_PROGRAMS[programId]) {
+    return res.json({ 
+      success: true, 
+      pseudocode: `/*\n * Native Solana Program: ${NATIVE_PROGRAMS[programId]}\n * \n * This is a built-in runtime program written in Rust.\n * It does not execute via the BPF VM, so there is no bytecode to decompile.\n * The failure occurred internally within the Solana validator's native execution.\n */\n` 
+    });
+  }
+
   const soPath = path.join(rootDir, `${programId}.so`);
   const outPath = path.join(rootDir, `${programId}_out.c`);
   const scriptPath = path.join(rootDir, 'scripts', 'decompile_so.sh');

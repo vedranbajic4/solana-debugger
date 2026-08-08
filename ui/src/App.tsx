@@ -5,6 +5,8 @@ import { MetricsHeader } from './components/MetricsHeader';
 import { AnchorAnalysisCard } from './components/AnchorAnalysisCard';
 import { BytecodeViewer } from './components/BytecodeViewer';
 import { SourceCodeViewer } from './components/SourceCodeViewer';
+import { FailureDiagnosisCard } from './components/FailureDiagnosisCard';
+import { generateDiagnosis, type FailureDiagnosis } from './utils/diagnosis';
 import { AlertCircle, Cpu } from 'lucide-react';
 
 export interface DecodedError {
@@ -73,6 +75,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [selectedFunctionName, setSelectedFunctionName] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<FailureDiagnosis | null>(null);
 
   const handleAnalyze = async (
     sigToAnalyze?: string,
@@ -125,6 +128,15 @@ export function App() {
         setSelectedProgramId(null);
         setSelectedFunctionName(null);
       }
+
+      const execStatus = data.analysisSummary?.execution_status || data.analysisSummary?.executionStatus || "";
+      const hasError = data.analysisSummary?.decodedError || 
+                       (typeof execStatus === 'string' && (execStatus.includes("Error") || execStatus.includes("failed") || execStatus.includes("exceeded")));
+      if (hasError) {
+        setDiagnosis(generateDiagnosis(data.analysisSummary, data.analysisSummary?.failureContext));
+      } else {
+        setDiagnosis(null);
+      }
     } catch (err: any) {
       console.error('Error fetching analysis:', err);
       setError(err.message || 'Could not connect to Solana Debugger backend (localhost:3001)');
@@ -141,6 +153,7 @@ export function App() {
     setError(null);
     setSelectedProgramId(null);
     setSelectedFunctionName(null);
+    setDiagnosis(null);
   };
 
   const handleNextChunk = () => {
@@ -207,6 +220,9 @@ export function App() {
         {/* Status Metrics */}
         <MetricsHeader signature={signature} metrics={chunkData?.metrics} />
 
+        {/* Diagnosis Engine Panel */}
+        <FailureDiagnosisCard diagnosis={diagnosis} />
+
         {/* High-Level Decoded Anchor Analysis Card */}
         <AnchorAnalysisCard 
           analysisSummary={chunkData?.analysisSummary} 
@@ -218,7 +234,6 @@ export function App() {
         <SourceCodeViewer 
           sourceContext={chunkData?.analysisSummary?.sourceContext}
           failureContext={chunkData?.analysisSummary?.failureContext}
-          analysisSummary={chunkData?.analysisSummary}
           selectedProgramId={selectedProgramId}
           selectedFunctionName={selectedFunctionName}
         />

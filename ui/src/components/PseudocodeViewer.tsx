@@ -4,7 +4,6 @@ import { FileCode2, Loader2, Code, AlertCircle } from 'lucide-react';
 interface PseudocodeViewerProps {
   programId: string;
   failureContext?: any;
-  analysisSummary?: any;
   autoExpand?: boolean;
 }
 
@@ -94,7 +93,7 @@ function highlightC(text: string): React.ReactNode[] {
   });
 }
 
-export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext, analysisSummary, autoExpand = false }) => {
+export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext, autoExpand = false }) => {
   const [isOpen, setIsOpen] = useState(autoExpand);
   const [isLoading, setIsLoading] = useState(false);
   const [pseudocode, setPseudocode] = useState<string | null>(null);
@@ -233,68 +232,13 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
                   }
                 }
 
-                let errorTitle = "Unknown cause";
-                let errorDetails = "Insufficient information to determine the exact reason.";
-
-                if (analysisSummary) {
-                  if (analysisSummary.decodedError) {
-                    const name = analysisSummary.decodedError.name;
-                    const msg = analysisSummary.decodedError.msg;
-                    
-                    if (name.includes("Constraint") || name.includes("Account")) {
-                       if (name.includes("NotInitialized") || name.includes("Uninitialized")) {
-                         errorTitle = "Account not initialized";
-                       } else if (name.includes("WrongProgram") || name.includes("InvalidOwner")) {
-                         errorTitle = "Invalid owner";
-                       } else {
-                         errorTitle = "Constraint violation";
-                       }
-                    } else if (name.includes("InsufficientFunds") || name.includes("InsufficientFundsForRent") || name.toLowerCase().includes("balance")) {
-                      errorTitle = "Insufficient funds / balance";
-                    } else if (name.includes("Signature") || name.includes("Signer")) {
-                      errorTitle = "Missing signer";
-                    } else if (name.includes("Overflow") || name.includes("Underflow")) {
-                      errorTitle = "Arithmetic overflow/underflow";
-                    } else {
-                      errorTitle = name;
-                    }
-                    errorDetails = msg;
-                  } else if (analysisSummary.accountValidations && analysisSummary.accountValidations.length > 0) {
-                    const val = analysisSummary.accountValidations[0];
-                    errorTitle = val.errorName || "Constraint violation";
-                    errorDetails = val.message || "An account failed validation constraints.";
-                  } else if (analysisSummary.execution_status) {
-                    const status = analysisSummary.execution_status;
-                    if (status.includes("insufficient funds") || status.includes("insufficient lamports")) {
-                      errorTitle = "Insufficient funds / balance";
-                      errorDetails = "The program attempted to use more funds than were available in the source account.";
-                    } else if (status.includes("instruction data") || status.includes("invalid instruction data")) {
-                      errorTitle = "Invalid instruction data";
-                      errorDetails = "The instruction data provided to the program is invalid or malformed.";
-                    } else if (status.includes("unauthorized") || status.includes("privilege escalated")) {
-                      errorTitle = "Unauthorized operation";
-                      errorDetails = "The program attempted an operation it does not have permission for (e.g. cross-program privilege escalation).";
-                    } else if (status.includes("Cross-program invocation with unauthorized signer")) {
-                      errorTitle = "Missing signer";
-                      errorDetails = "A required signature was missing for a cross-program invocation.";
-                    } else if (status.includes("exceeded maximum number of instructions") || status.includes("Compute budget exceeded")) {
-                      errorTitle = "Compute budget exceeded";
-                      errorDetails = "The program exceeded its allowed compute budget.";
-                    } else if (status.includes("memory allocation failed") || status.includes("out of bounds") || status.includes("Access violation") || status.includes("out of bounds memory access")) {
-                      errorTitle = "Out-of-bounds / memory access";
-                      errorDetails = "The program attempted to read or write memory out of bounds.";
-                    } else if (status.includes("Custom")) {
-                      errorTitle = "Program-specific/custom error";
-                      errorDetails = status;
-                    } else if (status !== "Success" && status.includes("Error")) {
-                      errorTitle = "Unknown cause";
-                      errorDetails = "Insufficient information to determine the exact reason. Solana error: " + status;
-                    }
-                  }
-                }
-
                 let renderStartIndex = 0;
                 let renderEndIndex = lines.length;
+
+                if (bestLineIdx === -1 && functionStartIdx !== -1) {
+                  bestLineIdx = functionStartIdx;
+                  isExactMatch = false;
+                }
 
                 if (bestLineIdx !== -1) {
                   renderStartIndex = Math.max(functionStartIdx !== -1 ? functionStartIdx : 0, bestLineIdx - 10);
@@ -314,51 +258,19 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
                     const isBest = absoluteIdx === bestLineIdx;
                     return (
                       <div key={absoluteIdx}>
-                        {isBest && (
-                          <div 
-                            className="bg-rose-950/20 border border-rose-900/50 rounded-lg p-4 mb-2 mt-3 mx-2 text-rose-200 text-xs flex flex-col space-y-3" 
-                            ref={el => { if (el && autoExpand) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
-                          >
-                            <div className="flex items-center space-x-2 font-bold text-sm text-rose-300 border-b border-rose-900/50 pb-2">
-                              <span>❌ Transaction failed</span>
-                            </div>
-                            
-                            <div className="flex flex-col space-y-1">
-                              <span className="font-bold text-rose-400">Error:</span>
-                              <span className="font-mono bg-rose-900/20 px-2 py-1 rounded inline-block w-fit text-rose-100">{errorTitle}</span>
-                            </div>
-
-                            <div className="flex flex-col space-y-1">
-                              <span className="font-bold text-rose-400">Details:</span>
-                              <span className="opacity-90 leading-relaxed text-[11px] max-w-xl">{errorDetails}</span>
-                            </div>
-
-                            <div className="flex flex-col space-y-1">
-                              <span className="font-bold text-rose-400">Location:</span>
-                              <span className="font-mono bg-rose-900/20 px-2 py-1 rounded inline-block w-fit">
-                                {targetFunc || 'unknown_function'}() → PC {failureContext?.runtimePc !== undefined ? `0x${failureContext.runtimePc.toString(16)}` : 'Unknown'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-col space-y-1">
-                              <span className="font-bold text-rose-400">Confidence:</span>
-                              <span className="font-mono text-[11px]">{isExactMatch ? 'High' : `Approximate (${Math.max(10, 95 - minDistance)}%)`}</span>
-                            </div>
-                            
-                            {analysisSummary?.execution_status && (
-                              <div className="mt-2 pt-3 border-t border-rose-900/30">
-                                <span className="font-bold text-rose-500 block mb-1 text-[10px] uppercase tracking-wider">Original Solana Error:</span>
-                                <span className="font-mono text-[10px] opacity-60 break-all">{analysisSummary.execution_status}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
                         <div 
-                          className={`px-3 py-0.5 whitespace-pre ${
-                            isBest ? 'bg-rose-900/30 text-rose-100 border-l-2 border-rose-500 font-bold' : 'hover:bg-white/5 border-l-2 border-transparent'
+                          id={isBest ? "pseudocode-error-line" : undefined}
+                          className={`px-3 py-1 whitespace-pre ${
+                            isBest ? 'bg-rose-950/60 text-rose-100 border-l-[3px] border-l-rose-500 font-bold' : 'hover:bg-white/5 border-l-[3px] border-l-transparent'
                           }`}
+                          ref={isBest ? (el => { if (el && autoExpand) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }) : undefined}
                         >
                           {highlightC(displayLine)}
+                          {isBest && (
+                            <span className="ml-8 font-bold text-[10px] text-rose-300 uppercase tracking-widest bg-rose-500/30 px-2 py-0.5 rounded border border-rose-500/50">
+                              ← {isExactMatch ? 'ERROR LOCATION' : 'APPROXIMATE LOCATION'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
