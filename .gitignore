@@ -28,3 +28,10 @@ bytecode.txt
 **/cargo-*-bpf-child-script-*.sh
 
 solana-tx/node_modules/
+
+# Ghidra generated C pseudocode & binaries
+*.c
+*.so
+
+# Additional text dumps
+test_bytecode.txt

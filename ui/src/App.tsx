@@ -71,6 +71,8 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isNavigatingChunk, setIsNavigatingChunk] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedFunctionName, setSelectedFunctionName] = useState<string | null>(null);
 
   const handleAnalyze = async (
     sigToAnalyze?: string,
@@ -114,6 +116,15 @@ export function App() {
       setChunkData(data);
       setCurrentPage(data.page);
       setChunkSize(data.chunkSize);
+      
+      // Auto-select failing program if any
+      if (data.analysisSummary?.failureContext?.failedProgramId) {
+        setSelectedProgramId(data.analysisSummary.failureContext.failedProgramId);
+        setSelectedFunctionName(data.analysisSummary.failureContext.function || null);
+      } else {
+        setSelectedProgramId(null);
+        setSelectedFunctionName(null);
+      }
     } catch (err: any) {
       console.error('Error fetching analysis:', err);
       setError(err.message || 'Could not connect to Solana Debugger backend (localhost:3001)');
@@ -128,6 +139,8 @@ export function App() {
     setChunkData(null);
     setCurrentPage(1);
     setError(null);
+    setSelectedProgramId(null);
+    setSelectedFunctionName(null);
   };
 
   const handleNextChunk = () => {
@@ -153,6 +166,11 @@ export function App() {
     if (chunkData) {
       handleAnalyze(signature, 1, newSize);
     }
+  };
+
+  const handleInstructionClick = (programId: string, functionName?: string) => {
+    setSelectedProgramId(programId);
+    setSelectedFunctionName(functionName || null);
   };
 
   return (
@@ -190,12 +208,18 @@ export function App() {
         <MetricsHeader signature={signature} metrics={chunkData?.metrics} />
 
         {/* High-Level Decoded Anchor Analysis Card */}
-        <AnchorAnalysisCard analysisSummary={chunkData?.analysisSummary} />
+        <AnchorAnalysisCard 
+          analysisSummary={chunkData?.analysisSummary} 
+          onInstructionClick={handleInstructionClick}
+          selectedProgramId={selectedProgramId}
+        />
 
         {/* Source Code View (if available) */}
         <SourceCodeViewer 
           sourceContext={chunkData?.analysisSummary?.sourceContext}
           failureContext={chunkData?.analysisSummary?.failureContext}
+          selectedProgramId={selectedProgramId}
+          selectedFunctionName={selectedFunctionName}
         />
 
         {/* Main Code & Disassembly Viewer */}

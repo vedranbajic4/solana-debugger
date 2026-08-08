@@ -160,6 +160,42 @@ app.get('/api/bytecode/raw', async (req, res) => {
   }
 });
 
+// Endpoint to fetch decompiled pseudocode via Ghidra
+app.get('/api/pseudocode/:programId', async (req, res) => {
+  const { programId } = req.params;
+  
+  if (!programId) {
+    return res.status(400).json({ success: false, error: 'Program ID is required' });
+  }
+
+  const soPath = path.join(rootDir, `${programId}.so`);
+  const outPath = path.join(rootDir, `${programId}_out.c`);
+  const scriptPath = path.join(rootDir, 'scripts', 'decompile_so.sh');
+
+  try {
+    await fs.access(soPath);
+  } catch {
+    return res.status(404).json({ success: false, error: `Program executable ${programId}.so not found in workspace.` });
+  }
+
+  console.log(`\n⚙️ Running Ghidra Headless Analyzer on ${programId}.so...`);
+  
+  exec(`bash ${scriptPath} ${soPath} ${outPath}`, { cwd: rootDir }, async (error, stdout, stderr) => {
+    if (error) {
+      console.error(`❌ Ghidra execution error: ${error.message}`);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    try {
+      const cCode = await fs.readFile(outPath, 'utf-8');
+      res.json({ success: true, pseudocode: cCode });
+    } catch (readError) {
+      console.error(`❌ Error reading Ghidra output: ${readError.message}`);
+      res.status(500).json({ success: false, error: 'Decompilation completed but output file could not be read.' });
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`⚡ Solana Debugger API Server running at http://localhost:${PORT}`);
 });

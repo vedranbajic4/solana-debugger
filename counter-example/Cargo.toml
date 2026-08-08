@@ -1,0 +1,115 @@
+[workspace]
+members = [
+    #basics
+    "basics/account-data/native/program",
+    "basics/account-data/pinocchio/program",
+    "basics/account-data/anchor/programs/anchor-program-example",
+    "basics/checking-accounts/native/program",
+    "basics/checking-accounts/pinocchio/program",
+    "basics/checking-accounts/anchor/programs/anchor-program-example",
+    "basics/checking-accounts/asm",
+    "basics/close-account/native/program",
+    "basics/close-account/pinocchio/program",
+    "basics/close-account/anchor/programs/close-account",
+    "basics/counter/native/program",
+    "basics/counter/pinocchio/program",
+    "basics/counter/anchor/programs/counter_anchor",
+    "basics/create-account/native/program",
+    "basics/create-account/pinocchio/program",
+    "basics/create-account/anchor/programs/create-system-account",
+    "basics/create-account/asm",
+    "basics/cross-program-invocation/anchor/programs/*",
+    "basics/cross-program-invocation/pinocchio/programs/*",
+    "basics/hello-solana/native/program",
+    "basics/hello-solana/anchor/programs/*",
+    "basics/hello-solana/pinocchio/program",
+    "basics/hello-solana/asm",
+    "basics/pda-rent-payer/native/program",
+    "basics/pda-rent-payer/pinocchio/program",
+    "basics/pda-rent-payer/anchor/programs/*",
+    "basics/processing-instructions/native/program",
+    "basics/processing-instructions/pinocchio/program",
+    "basics/processing-instructions/anchor/programs/*",
+    "basics/program-derived-addresses/native/program",
+    "basics/program-derived-addresses/pinocchio/program",
+    "basics/program-derived-addresses/anchor/programs/*",
+    "basics/realloc/native/program",
+    "basics/realloc/pinocchio/program",
+    "basics/realloc/anchor/programs/*",
+    "basics/favorites/native/program",
+    "basics/favorites/pinocchio/program",
+    "basics/repository-layout/native/program",
+    "basics/repository-layout/pinocchio/program",
+    "basics/repository-layout/anchor/programs/*",
+    "basics/transfer-sol/native/program",
+    "basics/transfer-sol/pinocchio/program",
+    "basics/transfer-sol/anchor/programs/*",
+    "basics/transfer-sol/asm",
+
+    # cryptography
+    "cryptography/bls12-381/pinocchio/program",
+    "cryptography/bn254/pinocchio/program",
+
+    # tokens
+    "tokens/create-token/native/program",
+    "tokens/create-token/pinocchio/program",
+    "tokens/escrow/native/program",
+    "tokens/escrow/pinocchio/program",
+    "tokens/nft-operations/pinocchio/program",
+    "tokens/pda-mint-authority/native/program",
+    "tokens/pda-mint-authority/pinocchio/program",
+    "tokens/transfer-tokens/native/program",
+    "tokens/transfer-tokens/pinocchio/program",
+    "tokens/token-2022/mint-close-authority/native/program",
+    "tokens/token-2022/mint-close-authority/pinocchio/program",
+    "tokens/token-2022/non-transferable/native/program",
+    "tokens/token-2022/non-transferable/pinocchio/program",
+    "tokens/token-2022/default-account-state/native/program",
+    "tokens/token-2022/default-account-state/pinocchio/program",
+    "tokens/token-2022/transfer-fee/native/program",
+    "tokens/token-2022/transfer-fee/pinocchio/program",
+    "tokens/token-2022/multiple-extensions/native/program",
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+
+[workspace.dependencies]
+
+# misc
+borsh = "1.6.1"
+borsh-derive = "1.6.1"
+
+
+# spl
+solana-program = "4.0"
+spl-token-2022 = {version = "9.0.0" , features = [ "no-entrypoint" ] }
+
+# interface
+solana-system-interface = {version = "2.0.0", features = ["bincode"]}
+spl-token-interface = "2.0.0"
+spl-associated-token-account-interface = "2.0.0"
+spl-token-2022-interface = "2.1.0"
+
+# pinocchio
+pinocchio = { version = "0.11.1", features = ["cpi", "copy", "account-resize"] }
+pinocchio-log = "0.5.1"
+pinocchio-system = "0.6.1"
+pinocchio-token = "0.6.0"
+pinocchio-token-2022 = "0.3.1"
+pinocchio-associated-token-account = "0.4.0"
+
+# testing
+litesvm = "0.11.0"
+solana-instruction = "3.0.0"
+solana-instruction-error = "2.3.0"
+solana-keypair = "3.0.1"
+solana-message = "4.0.0"
+solana-native-token = "3.0.0"
+solana-pubkey = "3.0.0"
+solana-rent = "4.1.0"
+solana-signer = "3.0.0"
+solana-transaction = "3.0.1"
+solana-transaction-error = "3.2.0"
+solana-address = { version = "2.6.0", features = ["curve25519", "decode"] }
