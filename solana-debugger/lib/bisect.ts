@@ -54,6 +54,13 @@ export type BisectStep = {
    * renderers must say so rather than reading the null as "nothing to report".
    */
   outcomeWithout: unknown;
+  /**
+   * True when removal was never attempted, because a transaction needs at least
+   * one instruction. Such an instruction is reported as required, but that is a
+   * limit of the method rather than a measurement — and saying so is the
+   * difference between "we proved this is needed" and "we never checked".
+   */
+  untested?: boolean;
 };
 
 export type BisectReport = {
@@ -226,7 +233,19 @@ export async function bisectInstructions(opts: {
 
   for (let i = allInstructions.length - 1; i >= 0; i--) {
     const without = keep.filter((k) => k !== i);
-    if (without.length === 0) continue; // a transaction needs at least one instruction
+    if (without.length === 0) {
+      // Nothing left to remove it from. Record it rather than skipping, or the
+      // last surviving instruction would vanish from the list while still being
+      // claimed as required.
+      steps.push({
+        index: i,
+        programId: normalized[i]?.programId ?? "<unknown>",
+        removable: false,
+        outcomeWithout: null,
+        untested: true,
+      });
+      continue;
+    }
 
     let outcome: unknown;
     try {
@@ -293,7 +312,9 @@ export function formatBisect(report: BisectReport): string[] {
   for (const step of report.steps) {
     const mark = step.removable ? "drop  " : "KEEP  ";
     out.push(`  ${mark} [${step.index}] ${step.programId}`);
-    if (!step.removable) {
+    if (step.untested) {
+      out.push("            not tested — a transaction needs at least one instruction");
+    } else if (!step.removable) {
       // A null outcome here is success, not absence — and "the transaction
       // works without this instruction" is the clearest reason to keep it.
       out.push(

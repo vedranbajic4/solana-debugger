@@ -144,6 +144,12 @@ The validator only returns `accounts` for a simulation that succeeded — a fail
 
 The runtime logs `Program <id> failed: custom program error: 0x<code>` once per program on the stack as the error propagates upward, **innermost first**, so the *first* such line names the originating program. `findFailingProgramInLogs()` parses that and returns null when the logs are missing, truncated, or disagree with `meta.err` — in which case `fetch-tx.ts` falls back to the top-level program and prints a note saying the attribution may be wrong. Preserve that "degrade honestly, never guess" behaviour when touching this path.
 
+## The two demo transcripts
+
+`demo-full.txt` and `demo-no-idl.txt` are checked-in end-to-end runs of `fetch` + `whatif --bisect`, and they exist as a pair on purpose. `demo-full.txt` is the good path: the program publishes an IDL, so the error resolves to `ExceededSlippage`, the swap's arguments decode, and a rule cites the `min_quote_amount_out` that wasn't met. `demo-no-idl.txt` is the common one: no published IDL, so `custom 57005` stays a number, no rule fires, and the tool reports only what it can stand behind — where it failed, what it cost, and a minimal reproduction.
+
+Regenerate them when output changes; the previous pair went stale across the renderer rewrite and had to be deleted. The second is the more important one to keep honest — it is the shape of most real debugging, and a demo that only showed the good path would misrepresent the tool.
+
 ## Verifying the replay
 
 `npm run verify` replays every transaction in `corpus.json` through the same `lib/replay.ts` used by `npm run replay` and reports how often the fork lands on mainnet's outcome. Every other feature in this tool reads state off the fork and reasons about it, so all of it is worthless if the fork doesn't reproduce the transaction — this is the number that says whether the rest means anything.

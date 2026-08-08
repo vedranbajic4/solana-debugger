@@ -111,4 +111,15 @@
     CALL TREE section, self-CU-per-program, and decoded instruction args, so a
     failing swap now reads "pump_amm sell base_amount_in=23101
     min_quote_amount_out=18351529" next to its ExceededSlippage.
-[ ] end-to-end on the 0xdead tx
+[x] end-to-end on the 0xdead tx
+    Transcripts checked in: demo-no-idl.txt (the 0xdead tx) and demo-full.txt
+    (a pump.fun swap). Both run fetch + whatif + bisect.
+    The 0xdead program publishes no IDL, so 57005 stays a number and no rule
+    fires — the tool reports where, how much, and a 4->1 instruction minimal
+    repro, and guesses at nothing. demo-full.txt is the contrast: IDL-resolved
+    error name, decoded args, a diagnosis citing min_quote_amount_out, 7->3.
+    Running it end to end found the last bug: the final surviving instruction
+    was never tested for removal (nothing to remove it from) and so was
+    silently omitted from the list while still being claimed as required. It
+    is now listed and labelled "not tested".
+    (The old demo-fetch*.txt were stale — pre-renderer — and are removed.)

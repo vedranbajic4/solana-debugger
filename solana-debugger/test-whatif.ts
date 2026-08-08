@@ -276,6 +276,19 @@ function bisectFixtures() {
       "a kept instruction whose removal succeeds says so",
       succeeds.includes("without it: the transaction succeeds")
     );
+
+    // The last surviving instruction can't be removed from an empty set, so it
+    // is required by construction rather than by measurement. Claiming it was
+    // tested would overstate what the bisect actually established.
+    const untested = formatBisect({
+      ...good,
+      steps: [{ index: 1, programId: "P1", removable: false, outcomeWithout: null, untested: true }],
+    }).join("\n");
+    check(
+      "an untested last instruction is labelled as such",
+      untested.includes("not tested — a transaction needs at least one instruction")
+    );
+    check("and is not passed off as measured", !untested.includes("without it:"));
   }
 }
 
