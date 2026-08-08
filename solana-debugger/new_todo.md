@@ -94,7 +94,16 @@
     and revealed the next failure. A battery that only ever says "no change"
     would prove nothing, so the positive case matters.
     Time only moves forward — surfnet can't answer "what if this ran earlier".
-[ ] instruction bisect
+[x] instruction bisect
+    lib/bisect.ts + `npm run whatif <SIG> -- --bisect`. Greedy minimization
+    rather than binary search: the failure isn't monotone in the prefix (setup
+    in the middle can matter while earlier instructions don't), and O(n) sims
+    is cheap at real instruction counts. Compares failures by payload, not by
+    InstructionError[0], since dropping an earlier instruction shifts the index.
+    Gated on the rebuilt-but-unminimized tx reproducing first — decompiling and
+    recompiling reorders account keys, so if that alone changes the outcome the
+    minimization is meaningless and it says so.
+    Live: a 7-instruction slippage tx -> 3 needed; a 10-instruction one -> 1.
 [x] CLI renderer + --json
     fetch-tx.ts is now a pure renderer over buildDebugReport — its duplicate
     GATHER block is gone, so --json and the text are the same conclusions.

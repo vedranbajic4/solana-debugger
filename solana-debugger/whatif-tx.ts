@@ -3,18 +3,22 @@
  *
  * Usage:
  *   npm run whatif <SIGNATURE>
+ *   npm run whatif <SIGNATURE> -- --bisect   # ...also minimize the instructions
  *   npm run whatif <SIGNATURE> -- --json
  *
  * Answers "what would have made this work?" by perturbing one variable at a
  * time against a local surfnet and reporting which change moves the outcome.
- * Needs a surfnet running (see SURFNET_RPC), because it replays.
+ * `--bisect` adds the other half of the same question — which instructions the
+ * failure actually needs — and is opt-in because it costs one simulation per
+ * instruction. Needs a surfnet running (see SURFNET_RPC), because it replays.
  *
- * A printer over `lib/counterfactual.ts` — the same rule as `replay-tx.ts` and
- * `fetch-tx.ts`. Nothing is decided here.
+ * A printer over `lib/counterfactual.ts` and `lib/bisect.ts` — the same rule as
+ * `replay-tx.ts` and `fetch-tx.ts`. Nothing is decided here.
  */
 
 import { Connection } from "@solana/web3.js";
 
+import { bisectInstructions, formatBisect } from "./lib/bisect.js";
 import { formatCounterfactuals, runCounterfactuals } from "./lib/counterfactual.js";
 import { surfnetCall } from "./lib/surfnet.js";
 
@@ -23,10 +27,11 @@ const SURFNET_RPC = process.env.SURFNET_RPC ?? "http://127.0.0.1:8899";
 async function main() {
   const args = process.argv.slice(2);
   const asJson = args.includes("--json");
+  const wantsBisect = args.includes("--bisect");
   const signature = args.find((a) => !a.startsWith("-"));
 
   if (!signature) {
-    console.error("usage: npm run whatif <SIGNATURE> [-- --json]");
+    console.error("usage: npm run whatif <SIGNATURE> [-- --bisect | --json]");
     process.exit(1);
   }
   const rpcUrl = process.env.RPC_URL;
@@ -53,9 +58,12 @@ async function main() {
   await surfnetCall(SURFNET_RPC, "surfnet_timeTravel", [{ absoluteSlot: tx.slot }]);
 
   const report = await runCounterfactuals({ mainnet, surfnet, surfnetUrl: SURFNET_RPC, signature });
+  const bisect = wantsBisect
+    ? await bisectInstructions({ mainnet, surfnet, surfnetUrl: SURFNET_RPC, signature })
+    : null;
 
   if (asJson) {
-    console.log(JSON.stringify(report, null, 2));
+    console.log(JSON.stringify({ counterfactuals: report, bisect }, null, 2));
     return;
   }
 
@@ -64,6 +72,11 @@ async function main() {
   console.log(`baseline : ${JSON.stringify(report.baseline.err)}  ${report.baseline.computeUnits ?? "?"} CU`);
   console.log("");
   for (const line of formatCounterfactuals(report)) console.log(line);
+
+  if (bisect) {
+    console.log(`\n=== WHICH INSTRUCTIONS THE FAILURE NEEDS ===`);
+    for (const line of formatBisect(bisect)) console.log(line);
+  }
 }
 
 main().catch((e) => {
