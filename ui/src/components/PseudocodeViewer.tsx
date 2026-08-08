@@ -3,9 +3,10 @@ import { FileCode2, Loader2, Code, AlertCircle } from 'lucide-react';
 
 interface PseudocodeViewerProps {
   programId: string;
+  failureContext?: any;
 }
 
-export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId }) => {
+export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, failureContext }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pseudocode, setPseudocode] = useState<string | null>(null);
@@ -78,9 +79,37 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId })
               </div>
             </div>
           ) : pseudocode ? (
-            <pre className="text-[11px] font-mono text-slate-300 overflow-x-auto overflow-y-auto max-h-[500px] p-2 bg-[#050608] rounded border border-[#1c1f2b] custom-scrollbar">
-              {pseudocode}
-            </pre>
+            <div className="text-[11px] font-mono text-slate-300 overflow-x-auto overflow-y-auto max-h-[500px] bg-[#050608] rounded border border-[#1c1f2b] custom-scrollbar">
+              {(() => {
+                const lines = pseudocode.split('\n');
+                let inHighlightBlock = false;
+                
+                const targetFunc = failureContext?.function;
+                const targetAddr = failureContext?.elfAddress ? `0x${failureContext.elfAddress.toString(16)}` : null;
+
+                return lines.map((line, idx) => {
+                  if (line.startsWith('/* Function: ')) {
+                    if ((targetFunc && line.includes(` ${targetFunc} `)) || 
+                        (targetAddr && line.includes(`@ ${targetAddr} `))) {
+                      inHighlightBlock = true;
+                    } else {
+                      inHighlightBlock = false;
+                    }
+                  }
+
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`px-3 py-0.5 whitespace-pre ${
+                        inHighlightBlock ? 'bg-rose-900/30 text-rose-200 border-l-2 border-rose-500' : 'hover:bg-white/5 border-l-2 border-transparent'
+                      }`}
+                    >
+                      {line}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           ) : null}
         </div>
       )}

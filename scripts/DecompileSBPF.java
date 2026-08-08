@@ -22,7 +22,7 @@ public class DecompileSBPF extends GhidraScript {
         FunctionIterator functions = currentProgram.getFunctionManager().getFunctions(true);
         while (functions.hasNext()) {
             Function func = functions.next();
-            writer.println("/* Function: " + func.getName() + " */");
+            writer.println("/* Function: " + func.getName() + " @ 0x" + Long.toHexString(func.getEntryPoint().getOffset()) + " */");
             DecompileResults results = decompiler.decompileFunction(func, 30, monitor);
             if (results != null && results.getDecompiledFunction() != null) {
                 String cCode = results.getDecompiledFunction().getC();

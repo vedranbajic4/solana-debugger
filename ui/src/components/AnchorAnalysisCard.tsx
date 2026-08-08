@@ -113,7 +113,14 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({ analysis
                       <span className="truncate max-w-xs">{ix.programId}</span>
                     </div>
                     
-                    <PseudocodeViewer programId={ix.programId} />
+                    <PseudocodeViewer 
+                      programId={ix.programId}
+                      failureContext={
+                        analysisSummary.failureContext?.failedProgramId === ix.programId
+                          ? analysisSummary.failureContext
+                          : undefined
+                      }
+                    />
                   </div>
                 </div>
 

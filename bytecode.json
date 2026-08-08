@@ -1,45 +1,27 @@
 {
-  "signature": "2HWunwBRo8WE8Uap9CwPUJ1GNigkc5foePTrvTUdz3o9JGLNsb54C4SyJqUbFP1A2JxxHAyEEzmnUayT6kD6L5ia",
-  "slot": 438047999,
+  "signature": "5mem38YbfpihuQAtvcHR83tuYgcQA6TMK6wbrU5zaGLqSKFGEAhA15KSz21gttMokW3csdenYnav5sxUMHDBma2p",
+  "slot": 1392,
   "executionStatus": "FAILED ❌",
-  "computeUnits": 16845,
-  "decodedError": {
-    "code": 1,
-    "hexCode": "0x0001",
-    "name": "ProgramError::Custom(1)",
-    "msg": "Execution failure (Error Code: 1)"
-  },
+  "computeUnits": 1425,
+  "decodedError": null,
   "decodedInstructions": [
     {
-      "programId": "ComputeBudget111111111111111111111111111111",
-      "programLabel": "Compute Budget Program",
-      "name": "SetComputeUnitLimit",
-      "discriminatorHex": "",
-      "decodedArgs": "limit: 560677 CU",
-      "dataHex": "02258e0800"
-    },
-    {
-      "programId": "ComputeBudget111111111111111111111111111111",
-      "programLabel": "Compute Budget Program",
-      "name": "SetComputeUnitPrice",
-      "discriminatorHex": "0380040000000000",
-      "decodedArgs": "price: 1152 micro-lamports/CU",
-      "dataHex": "038004000000000000"
-    },
-    {
-      "programId": "3kxvUk2jy1QfzbWqanxHSqnebzjDH5XRpkvERwf12qVK",
-      "programLabel": "Program (3kxvUk2j)",
-      "name": "Instruction (0x0500ca6e)",
-      "discriminatorHex": "0500ca6e0b000100",
+      "programId": "3Sizn8R7A1SGkAfnC8qww4xKWTdbUkwZRsS8AXQy6L9f",
+      "programLabel": "Program (3Sizn8R7)",
+      "name": "Swap (Variant 11)",
+      "discriminatorHex": "0b12680968ae3b21",
       "decodedArgs": null,
-      "dataHex": "0500ca6e0b00010005000000061001120d12"
+      "dataHex": "0b12680968ae3b21"
     }
   ],
   "accountValidations": [],
   "failureContext": {
-    "failedProgramId": "3kxvUk2jy1QfzbWqanxHSqnebzjDH5XRpkvERwf12qVK",
-    "failedInstructionIndex": null,
-    "sourceLocation": null
+    "failedProgramId": "3Sizn8R7A1SGkAfnC8qww4xKWTdbUkwZRsS8AXQy6L9f",
+    "failedInstructionIndex": 0,
+    "sourceLocation": null,
+    "runtimePc": null,
+    "elfAddress": null,
+    "function": "Swap (Variant 11)"
   },
   "sourceContext": {
     "available": false,
