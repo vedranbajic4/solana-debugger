@@ -26,6 +26,8 @@ pub struct AnalysisSummary {
     pub decoded_error: Option<AnchorErrorDetail>,
     pub decoded_instructions: Vec<DecodedInstructionSummary>,
     pub account_validations: Vec<AccountValidationSummary>,
+    pub failure_context: Option<FailureContext>,
+    pub source_context: Option<SourceContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +47,40 @@ pub struct AccountValidationSummary {
     pub program_id: String,
     pub error_name: String,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FailureContext {
+    pub failed_program_id: Option<String>,
+    pub failed_instruction_index: Option<u32>,
+    pub source_location: Option<SourceLocationInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceLocationInfo {
+    pub file: String,
+    pub line: u64,
+    pub column: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceContext {
+    pub available: bool,
+    pub file_name: Option<String>,
+    pub error_line: Option<u64>,
+    pub source_lines: Vec<SourceLine>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceLine {
+    pub line: u64,
+    pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_error: Option<bool>,
 }
 
 /// Parsed Anchor IDL schema
@@ -342,6 +378,24 @@ impl AnchorDecoder {
             return Some(variant_name.to_string());
         }
 
+        None
+    }
+
+    /// Extract the failed program ID from VM execution logs
+    pub fn extract_failed_program_from_logs(logs: &[String]) -> Option<String> {
+        for log in logs.iter().rev() {
+            if log.contains("failed:") {
+                // Pattern: "Program <PUBKEY> failed: ..."
+                if let Some(rest) = log.strip_prefix("Program ") {
+                    if let Some(pubkey_end) = rest.find(" failed") {
+                        let pubkey = &rest[..pubkey_end];
+                        if pubkey.len() >= 32 && pubkey.len() <= 44 {
+                            return Some(pubkey.to_string());
+                        }
+                    }
+                }
+            }
+        }
         None
     }
 

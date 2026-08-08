@@ -4,6 +4,7 @@ import { TransactionInput } from './components/TransactionInput';
 import { MetricsHeader } from './components/MetricsHeader';
 import { AnchorAnalysisCard } from './components/AnchorAnalysisCard';
 import { BytecodeViewer } from './components/BytecodeViewer';
+import { SourceCodeViewer } from './components/SourceCodeViewer';
 import { AlertCircle, Cpu } from 'lucide-react';
 
 export interface DecodedError {
@@ -36,6 +37,8 @@ export interface AnalysisSummary {
   decodedError?: DecodedError | null;
   decodedInstructions: DecodedInstruction[];
   accountValidations: AccountValidation[];
+  sourceContext?: any;
+  failureContext?: any;
 }
 
 export interface ChunkData {
@@ -188,6 +191,12 @@ export function App() {
 
         {/* High-Level Decoded Anchor Analysis Card */}
         <AnchorAnalysisCard analysisSummary={chunkData?.analysisSummary} />
+
+        {/* Source Code View (if available) */}
+        <SourceCodeViewer 
+          sourceContext={chunkData?.analysisSummary?.sourceContext}
+          failureContext={chunkData?.analysisSummary?.failureContext}
+        />
 
         {/* Main Code & Disassembly Viewer */}
         <BytecodeViewer
