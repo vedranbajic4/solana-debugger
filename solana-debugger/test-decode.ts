@@ -15,8 +15,16 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
 
+import { decodeFields, type IdlField, type IdlTypeDef } from "./lib/borsh.js";
 import { CORPUS_PATH, type CorpusFile } from "./lib/corpus.js";
 import { normalizeInstructions } from "./lib/decode.js";
+import { tryFetchAnchorIdl } from "./lib/errors.js";
+import {
+  anchorDiscriminator,
+  decodeIdlAccount,
+  decodeIdlInstruction,
+  type AnchorIdl,
+} from "./lib/idl-decode.js";
 import {
   clearIdlMemoryCache,
   getCachedIdl,
@@ -247,7 +255,62 @@ async function live() {
     }
   }
 
-  console.log(`  ${decoded}/${seen} native instructions decoded`);
+  // IDL path: real published IDLs are the only honest test of discriminator
+  // derivation and the borsh reader against types we didn't choose.
+  console.log("\nlive: IDL-decoding non-native instructions");
+  const programs = new Set<string>();
+  for (const entry of corpus.entries) programs.add(entry.program);
+
+  let withIdl = 0;
+  let idlMatched = 0;
+  let idlAttempted = 0;
+  const borshErrors: string[] = [];
+
+  for (const entry of corpus.entries) {
+    const tx = await connection.getTransaction(entry.signature, {
+      maxSupportedTransactionVersion: 0,
+    });
+    if (!tx?.meta) continue;
+    for (const ix of normalizeInstructions(tx)) {
+      if (isNativeProgram(ix.programId)) continue;
+      const idl = (await getCachedIdl(
+        connection,
+        ix.programId,
+        tryFetchAnchorIdl
+      )) as AnchorIdl | null;
+      if (!idl) continue;
+      idlAttempted++;
+      const result = decodeIdlInstruction(
+        idl,
+        ix.programId,
+        ix.dataBase64,
+        ix.accounts.map((a) => a.pubkey)
+      );
+      if (result) {
+        idlMatched++;
+        if (result.error) borshErrors.push(`${result.name}: ${result.error}`);
+      }
+    }
+  }
+  for (const p of programs) {
+    const idl = (await getCachedIdl(connection, p, tryFetchAnchorIdl)) as AnchorIdl | null;
+    if (idl) withIdl++;
+  }
+
+  console.log(`  ${withIdl}/${programs.size} corpus programs publish an on-chain IDL`);
+  console.log(`  ${idlMatched}/${idlAttempted} instructions matched an IDL discriminator`);
+  if (borshErrors.length) {
+    console.log("  partial decodes:");
+    for (const e of new Set(borshErrors)) console.log(`    ${e}`);
+  }
+  check("at least one corpus program has a usable IDL", withIdl > 0, `${withIdl} found`);
+  check(
+    "IDL instructions decode without borsh errors",
+    borshErrors.length === 0,
+    `${borshErrors.length} partial`
+  );
+
+  console.log(`\n  ${decoded}/${seen} native instructions decoded`);
   const top = [...names.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   console.log(`  most common: ${top.map(([n, c]) => `${n}×${c}`).join(", ")}`);
   if (unknown.size) {
@@ -258,8 +321,179 @@ async function live() {
   check("the corpus actually exercises the decoders", seen > 0, `saw ${seen}`);
 }
 
+function borshFixtures() {
+  console.log("\nborsh reader");
+  const types: IdlTypeDef[] = [
+    {
+      name: "Inner",
+      type: { kind: "struct", fields: [{ name: "flag", type: "bool" }] },
+    },
+    {
+      name: "Side",
+      type: { kind: "enum", variants: [{ name: "Bid" }, { name: "Ask" }] },
+    },
+  ];
+
+  // u64 max, i32 negative, bool, pubkey, string, option(none), vec<u16>, [u8;4]
+  const buf = Buffer.concat([
+    Buffer.from("ffffffffffffffff", "hex"), // u64 max
+    (() => { const b = Buffer.alloc(4); b.writeInt32LE(-7); return b; })(),
+    Buffer.from([1]), // bool true
+    PublicKey.default.toBuffer(),
+    (() => {
+      const s = Buffer.from("hey", "utf8");
+      const l = Buffer.alloc(4); l.writeUInt32LE(s.length);
+      return Buffer.concat([l, s]);
+    })(),
+    Buffer.from([0]), // option none
+    (() => {
+      const l = Buffer.alloc(4); l.writeUInt32LE(2);
+      return Buffer.concat([l, Buffer.from([1, 0, 2, 0])]);
+    })(),
+    Buffer.from([0xde, 0xad, 0xbe, 0xef]),
+    Buffer.from([1]), // enum variant 1
+    Buffer.from([1]), // Inner.flag
+  ]);
+
+  const fields: IdlField[] = [
+    { name: "big", type: "u64" },
+    { name: "neg", type: "i32" },
+    { name: "flag", type: "bool" },
+    { name: "key", type: "pubkey" },
+    { name: "label", type: "string" },
+    { name: "maybe", type: { option: "u64" } },
+    { name: "list", type: { vec: "u16" } },
+    { name: "raw", type: { array: ["u8", 4] } },
+    { name: "side", type: { defined: "Side" } },
+    { name: "inner", type: { defined: { name: "Inner" } } },
+  ];
+
+  const { values, error, bytesRead } = decodeFields(buf, fields, types);
+  check("decodes without error", error === null, error ?? undefined);
+  check("u64 max as a decimal string", values["big"] === "18446744073709551615");
+  check("signed i32", values["neg"] === -7);
+  check("bool", values["flag"] === true);
+  check("pubkey as base58", values["key"] === PublicKey.default.toBase58());
+  check("string", values["label"] === "hey");
+  check("option none is null", values["maybe"] === null);
+  check("vec<u16>", JSON.stringify(values["list"]) === "[1,2]");
+  check("byte array as hex", values["raw"] === "deadbeef");
+  check("unit enum variant by name", values["side"] === "Ask");
+  check("nested defined struct", JSON.stringify(values["inner"]) === '{"flag":true}');
+  check("consumed the whole buffer", bytesRead === buf.length);
+
+  // Failure must stop, not skip — a misaligned field poisons everything after.
+  const short = decodeFields(Buffer.from([1, 2]), [
+    { name: "a", type: "u8" },
+    { name: "b", type: "u64" },
+  ], []);
+  check("stops at a truncated field", short.error !== null);
+  check("keeps the fields read before the break", short.values["a"] === 1);
+  check("does not invent the unread field", !("b" in short.values));
+
+  const unknown = decodeFields(Buffer.alloc(8), [{ name: "x", type: "quaternion" }], []);
+  check("refuses an unknown type", unknown.error?.includes("unknown primitive") === true);
+
+  const badEnum = decodeFields(Buffer.from([9]), [{ name: "s", type: { defined: "Side" } }], types);
+  check("refuses an out-of-range enum variant", badEnum.error?.includes("no variant 9") === true);
+
+  // A tuple struct: Anchor reuses `fields` for bare types with no names. Read
+  // as a named struct this decodes garbage — pump.fun's OptionBool is exactly
+  // this shape and it broke the live run.
+  const tupleTypes: IdlTypeDef[] = [
+    { name: "OptionBool", type: { kind: "struct", fields: ["bool"] as never } },
+  ];
+  const tuple = decodeFields(
+    Buffer.from([1]),
+    [{ name: "trackVolume", type: { defined: { name: "OptionBool" } } }],
+    tupleTypes
+  );
+  check("decodes a tuple struct positionally", tuple.error === null, tuple.error ?? undefined);
+  check("tuple struct value", JSON.stringify(tuple.values["trackVolume"]) === "[true]");
+
+  // Whatever an IDL contains, the reader must fail as a BorshError with an
+  // offset — never a raw TypeError from probing a malformed type.
+  const malformed = decodeFields(Buffer.alloc(4), [{ name: "x", type: undefined as never }], []);
+  check("malformed type fails cleanly", malformed.error?.includes("malformed type") === true);
+}
+
+function idlFixtures() {
+  console.log("\nIDL instruction and account decoding");
+
+  // Legacy shape: camelCase names, no discriminators, inline account layout.
+  const legacy: AnchorIdl = {
+    name: "my_program",
+    instructions: [
+      {
+        name: "initializeMint",
+        args: [{ name: "decimals", type: "u8" }],
+        accounts: [{ name: "mint" }, { name: "payer" }],
+      },
+    ],
+    accounts: [
+      {
+        name: "Pool",
+        type: { kind: "struct", fields: [{ name: "liquidity", type: "u64" }] },
+      },
+    ],
+  };
+
+  // Anchor hashes the snake_case form of the instruction name.
+  const disc = anchorDiscriminator("global", "initialize_mint");
+  const ixData = Buffer.concat([disc, Buffer.from([9])]).toString("base64");
+  const decoded = decodeIdlInstruction(legacy, "Prog", ixData, ["mintKey", "payerKey"]);
+  check("matches a legacy discriminator", decoded?.name === "initializeMint");
+  check("decodes the arg", decoded?.args["decimals"] === 9);
+  check("labels accounts from the IDL", decoded?.accounts[0]?.role === "mint");
+  check("uses the IDL's program name", decoded?.program === "my_program");
+
+  const accData = Buffer.concat([
+    anchorDiscriminator("account", "Pool"),
+    (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(1234n); return b; })(),
+  ]);
+  const acc = decodeIdlAccount(legacy, "Prog", accData);
+  check("matches a legacy account discriminator", acc?.name === "Pool");
+  check("decodes the account field", acc?.fields["liquidity"] === "1234");
+
+  // 0.30+ shape: explicit discriminators, layout in `types`, {defined:{name}}.
+  const modern: AnchorIdl = {
+    metadata: { name: "new_program" },
+    instructions: [
+      { name: "swap", discriminator: [1, 2, 3, 4, 5, 6, 7, 8], args: [{ name: "amount", type: "u64" }] },
+    ],
+    accounts: [{ name: "Whirlpool", discriminator: [9, 9, 9, 9, 9, 9, 9, 9] }],
+    types: [
+      {
+        name: "Whirlpool",
+        type: { kind: "struct", fields: [{ name: "tickSpacing", type: "u16" }] },
+      },
+    ],
+  };
+  const modernIx = Buffer.concat([
+    Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]),
+    (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(500n); return b; })(),
+  ]).toString("base64");
+  const m = decodeIdlInstruction(modern, "Prog", modernIx, []);
+  check("uses an explicit discriminator", m?.name === "swap");
+  check("decodes its arg", m?.args["amount"] === "500");
+  check("prefers metadata.name", m?.program === "new_program");
+
+  const modernAcc = decodeIdlAccount(
+    modern,
+    "Prog",
+    Buffer.concat([Buffer.from([9, 9, 9, 9, 9, 9, 9, 9]), Buffer.from([64, 0])])
+  );
+  check("finds the layout in types", modernAcc?.name === "Whirlpool");
+  check("decodes it", modernAcc?.fields["tickSpacing"] === 64);
+
+  check("unknown discriminator returns null", decodeIdlInstruction(legacy, "Prog", Buffer.alloc(16).toString("base64"), []) === null);
+  check("data shorter than a discriminator returns null", decodeIdlInstruction(legacy, "Prog", "AAA=", []) === null);
+}
+
 async function main() {
   decoderFixtures();
+  borshFixtures();
+  idlFixtures();
   await cacheFixtures();
   if (process.argv.includes("--live")) await live();
   console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) FAILED`);

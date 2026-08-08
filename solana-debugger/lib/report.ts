@@ -25,8 +25,16 @@
 import type { Connection, VersionedTransactionResponse } from "@solana/web3.js";
 
 import { buildCpiTree, deepestFailedFrame, framesBySelfCu, type CpiTree } from "./cpi-tree.js";
-import { decodeComputeBudgetIx, normalizeInstructions } from "./decode.js";
-import { findFailingProgramInLogs, resolveCustomError, type ResolvedError } from "./errors.js";
+import { decodeComputeBudgetIx, normalizeInstructions, type NormalizedIx } from "./decode.js";
+import {
+  findFailingProgramInLogs,
+  resolveCustomError,
+  tryFetchAnchorIdl,
+  type ResolvedError,
+} from "./errors.js";
+import type { BorshValue } from "./borsh.js";
+import { decodeIdlInstruction, type AnchorIdl, type DecodedIdlIx } from "./idl-decode.js";
+import { getCachedIdl } from "./idl-cache.js";
 import { decodeNativeIx, type DecodedIx } from "./native-decoders.js";
 import { findLogHint, parseAnchorError, type AnchorErrorInfo } from "./summary.js";
 
@@ -95,6 +103,46 @@ export type Movements = {
   }[];
 };
 
+/**
+ * One decoded instruction, however it was decoded.
+ *
+ * `source` is kept because the two paths carry different authority: `native` is
+ * a hand-maintained table of a stable public layout, `idl` is the program's own
+ * published description. When they'd disagree, the IDL is about that exact
+ * program and the table is about a program family.
+ */
+export type DecodedInstruction = {
+  source: "native" | "idl";
+  program: string;
+  name: string;
+  args: { [key: string]: BorshValue };
+  accounts: { role: string; pubkey: string }[];
+  /** Why the decode is incomplete, when it is. Args before this point stand. */
+  partial?: string;
+};
+
+function unifyNative(ix: DecodedIx): DecodedInstruction {
+  return {
+    source: "native",
+    program: ix.program,
+    name: ix.name,
+    args: ix.args,
+    accounts: ix.accounts,
+    ...(ix.truncated ? { partial: "arguments not fully decoded for this variant" } : {}),
+  };
+}
+
+function unifyIdl(ix: DecodedIdlIx): DecodedInstruction {
+  return {
+    source: "idl",
+    program: ix.program,
+    name: ix.name,
+    args: ix.args,
+    accounts: ix.accounts,
+    ...(ix.error ? { partial: ix.error } : {}),
+  };
+}
+
 export type DebugReport = {
   signature: string;
   slot: number;
@@ -119,11 +167,11 @@ export type DebugReport = {
     accountCount: number;
     failed: boolean;
     /**
-     * Present for System/Token/Token-2022/ATA. Those four have no on-chain IDL
-     * and appear in nearly every transaction, so hand-decoding is the only way
-     * to say what the instruction did. null means "not decoded", never "no-op".
+     * What the instruction actually did, from whichever source could say:
+     * hand-written tables for the four programs with no IDL, the program's own
+     * IDL otherwise. null means "not decoded", never "no-op".
      */
-    decoded: DecodedIx | null;
+    decoded: DecodedInstruction | null;
   }[];
   /**
    * Caveats that change how much to trust the rest. A renderer must surface
@@ -326,19 +374,46 @@ export async function buildDebugReport(
     callTree,
     movements: { lamports, tokens },
     accounts,
-    instructions: instructions.map((ix, index) => ({
-      index,
-      programId: ix.programId,
-      accountCount: ix.accounts.length,
-      failed: index === instructionIndex,
-      decoded: decodeNativeIx(
-        ix.programId,
-        ix.dataBase64,
-        ix.accounts.map((a) => a.pubkey)
-      ),
-    })),
+    instructions: await Promise.all(
+      instructions.map(async (ix, index) => ({
+        index,
+        programId: ix.programId,
+        accountCount: ix.accounts.length,
+        failed: index === instructionIndex,
+        decoded: await decodeInstruction(ix, connection),
+      }))
+    ),
     warnings,
   };
+}
+
+/**
+ * Decodes one instruction, trying the hand-written tables first.
+ *
+ * Order matters: the four native programs have no IDL to fetch, so trying them
+ * first avoids a pointless lookup on the instructions that appear most often.
+ * The IDL path needs a connection and is skipped without one, which keeps
+ * `buildDebugReport(…, null)` fully offline.
+ */
+async function decodeInstruction(
+  ix: NormalizedIx,
+  connection: Connection | null,
+): Promise<DecodedInstruction | null> {
+  const pubkeys = ix.accounts.map((a) => a.pubkey);
+
+  const native = decodeNativeIx(ix.programId, ix.dataBase64, pubkeys);
+  if (native) return unifyNative(native);
+  if (!connection) return null;
+
+  const idl = (await getCachedIdl(
+    connection,
+    ix.programId,
+    tryFetchAnchorIdl,
+  )) as AnchorIdl | null;
+  if (!idl) return null;
+
+  const decoded = decodeIdlInstruction(idl, ix.programId, ix.dataBase64, pubkeys);
+  return decoded ? unifyIdl(decoded) : null;
 }
 
 /**

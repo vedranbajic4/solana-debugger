@@ -43,8 +43,17 @@
     lib/native-decoders.ts, surfaced on DebugReport.instructions[].decoded.
     Decodes 104/104 native instructions across the corpus with no unrecognised
     discriminants. Unknown discriminant returns null rather than a guess.
-[ ] instruction arg decoder (discriminator + borsh)
-[ ] account struct decoder
+[x] instruction arg decoder (discriminator + borsh)
+    lib/borsh.ts (hand-rolled reader, no anchor dep) + lib/idl-decode.ts.
+    Handles legacy and 0.30+ IDL shapes: explicit discriminators when present,
+    sha256("global:"+snake_case) when not. Wired into
+    DebugReport.instructions[].decoded behind the native decoders.
+    Live: 8/12 non-native corpus instructions matched an IDL discriminator;
+    4/15 corpus programs publish an IDL at all.
+[x] account struct decoder
+    decodeIdlAccount() in lib/idl-decode.ts, by account discriminator, with
+    the 0.30+ layout-in-`types` indirection handled. Not yet consumed by the
+    account diff — that's item 15's field-level half.
 [ ] error tables: TransactionError / InstructionError / Anchor ranges
 [x] IDL 6000+ error lookup
     Already done: resolveCustomError() matches idl.errors by code.

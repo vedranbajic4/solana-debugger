@@ -37,6 +37,8 @@ Every file except `lib/decode.ts` and `lib/surfnet.ts` opens with a header comme
 | `lib/errors.ts` | resolves `Custom(n)` through a fallback chain |
 | `lib/idl-cache.ts` | disk cache for on-chain IDL lookups, misses included |
 | `lib/native-decoders.ts` | System/Token/Token-2022/ATA instruction decoding |
+| `lib/borsh.ts` | borsh reader driven by IDL type descriptions |
+| `lib/idl-decode.ts` | IDL-driven instruction args and account structs |
 | `lib/summary.ts` | Anchor error and log-hint extraction |
 | `lib/decode.ts` | legacy vs. v0 message normalization, address-lookup-table resolution |
 | `lib/corpus.ts`, `lib/surfnet.ts` | shared corpus types; surfnet JSON-RPC helper |
@@ -81,6 +83,12 @@ Two design points that are load-bearing:
 - **Archive first, metadata second.** The archive supplies opaque data; the tx's own metadata then corrects lamports and token amounts, which it knows exactly and the archive can miss (it answers as of the last write *before* the slot, so writes made earlier in the same slot are absent). `lib/replay.ts` re-reads the accounts after injecting so the metadata splice lands on archived data instead of silently overwriting it with the present-day copy read earlier.
 
 Executable accounts are skipped: overwriting a loaded program's account with a data blob breaks the fork's loader for no benefit. Pinning programs at a historical version is a separate problem.
+
+### Gotcha: Anchor IDLs come in two shapes, and `fields` means two things
+
+Both are live on mainnet and `lib/idl-decode.ts` reads both. Anchor 0.30+ ships explicit 8-byte `discriminator` arrays and puts an account's layout in `types`, leaving only a name behind in `accounts`; older IDLs have neither, so the discriminator is derived as Anchor does it — `sha256("global:<snake_case_ix>")` and `sha256("account:<PascalCaseAccount>")`, first 8 bytes. Type references also differ: `{defined: "X"}` vs `{defined: {name: "X"}}`.
+
+The trap is `fields`, which Anchor uses for **both** named structs (`[{name, type}, …]`) and tuple structs (`["bool", …]` — bare types, no names). Reading a tuple as named yields `undefined` field types, and borsh being positional, that misaligns everything after it into confident garbage. `isNamedFields()` sniffs the shape; pump.fun's `OptionBool` is exactly this case and it broke a live run. The same ambiguity applies to enum variant fields.
 
 ### Gotcha: `surfnet_setAccount` reports a failed *remote fetch* as `AccountNotFound`
 
