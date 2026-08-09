@@ -1,0 +1,18 @@
+[package]
+name = "poc-assert-invariant"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "poc_assert_invariant"
+
+[features]
+default = []
+no-entrypoint = []
+
+[dependencies]
+solana-program = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana"))'] }

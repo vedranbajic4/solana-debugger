@@ -1,0 +1,13 @@
+{
+  "name": "solana-debugger-poc-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sends the failing PoC transactions and records their signatures",
+  "scripts": {
+    "send": "node send.mjs all"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0"
+  }
+}
