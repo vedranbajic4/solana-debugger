@@ -17,6 +17,29 @@ app.use(cors());
 app.use(express.json());
 
 let lastAnalyzedSignature = null;
+let lastAnalyzedRpcUrl = null;
+
+// Clusters the UI can switch between. `null` rpcUrl means "auto-detect" (legacy behaviour).
+const NETWORK_RPC_URLS = {
+  'mainnet-beta': 'https://api.mainnet-beta.solana.com',
+  mainnet: 'https://api.mainnet-beta.solana.com',
+  devnet: 'https://api.devnet.solana.com',
+  testnet: 'https://api.testnet.solana.com',
+  localnet: 'http://127.0.0.1:8899',
+  localhost: 'http://127.0.0.1:8899',
+};
+
+// Resolve the RPC endpoint from the requested network, ignoring any client-supplied
+// URL that is not one of the known clusters.
+function resolveRpcUrl(network, rpcUrl) {
+  if (network && NETWORK_RPC_URLS[network]) {
+    return NETWORK_RPC_URLS[network];
+  }
+  if (rpcUrl && Object.values(NETWORK_RPC_URLS).includes(rpcUrl)) {
+    return rpcUrl;
+  }
+  return null;
+}
 
 // Parse bytecode file into header metrics, VM execution logs, and disassembly stream
 function parseBytecodeFile(content) {
@@ -64,8 +87,9 @@ function parseBytecodeFile(content) {
 
 // API Endpoint to analyze transaction signature & iterate through SBF disassembly chunks
 app.post('/api/analyze', async (req, res) => {
-  const { signature, page = 1, chunkSize = 100, force = false } = req.body;
+  const { signature, page = 1, chunkSize = 100, force = false, network, rpcUrl } = req.body;
   const targetSig = signature ? signature.trim() : '';
+  const targetRpcUrl = resolveRpcUrl(network, rpcUrl);
 
   const bytecodeFilePath = path.join(rootDir, 'bytecode.txt');
   const analysisJsonPath = path.join(rootDir, 'bytecode.json');
@@ -73,7 +97,8 @@ app.post('/api/analyze', async (req, res) => {
   const parsedPage = Math.max(1, parseInt(page) || 1);
   const parsedChunkSize = Math.max(10, Math.min(2000, parseInt(chunkSize) || 100));
 
-  const runTracerNeeded = force || targetSig !== lastAnalyzedSignature;
+  const runTracerNeeded =
+    force || targetSig !== lastAnalyzedSignature || targetRpcUrl !== lastAnalyzedRpcUrl;
 
   const processAndRespond = async () => {
     try {
@@ -132,9 +157,16 @@ app.post('/api/analyze', async (req, res) => {
     ? `cargo run --bin sbf_tracer -- ${targetSig} bytecode.txt`
     : `cargo run --bin sbf_tracer -- bytecode.txt`;
 
-  console.log(`\n🚀 Executing local tracer command in ${rootDir}: ${command}`);
+  console.log(
+    `\n🚀 Executing local tracer command in ${rootDir}: ${command} (RPC: ${targetRpcUrl || 'auto-detect'})`
+  );
 
-  exec(command, { cwd: rootDir }, async (error, stdout, stderr) => {
+  const tracerEnv = { ...process.env };
+  if (targetRpcUrl) {
+    tracerEnv.SOLANA_RPC_URL = targetRpcUrl;
+  }
+
+  exec(command, { cwd: rootDir, env: tracerEnv }, async (error, stdout, stderr) => {
     if (error) {
       console.error(`❌ Execution error: ${error.message}`);
       return res.status(500).json({
@@ -145,6 +177,7 @@ app.post('/api/analyze', async (req, res) => {
     }
 
     lastAnalyzedSignature = targetSig;
+    lastAnalyzedRpcUrl = targetRpcUrl;
     await processAndRespond();
   });
 });

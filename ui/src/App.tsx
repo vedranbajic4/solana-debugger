@@ -7,6 +7,7 @@ import { BytecodeViewer } from './components/BytecodeViewer';
 import { SourceCodeViewer } from './components/SourceCodeViewer';
 import { FailureDiagnosisCard } from './components/FailureDiagnosisCard';
 import { generateDiagnosis, type FailureDiagnosis } from './utils/diagnosis';
+import { getNetwork, loadStoredNetwork, storeNetwork, type NetworkId } from './networks';
 import { AlertCircle, Cpu } from 'lucide-react';
 
 export interface DecodedError {
@@ -76,12 +77,14 @@ export function App() {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [selectedFunctionName, setSelectedFunctionName] = useState<string | null>(null);
   const [diagnosis, setDiagnosis] = useState<FailureDiagnosis | null>(null);
+  const [network, setNetwork] = useState<NetworkId>(() => loadStoredNetwork());
 
   const handleAnalyze = async (
     sigToAnalyze?: string,
     targetPage = 1,
     targetChunkSize = chunkSize,
-    force = false
+    force = false,
+    targetNetwork: NetworkId = network
   ) => {
     const targetSig = (sigToAnalyze !== undefined ? sigToAnalyze : signature).trim();
     if (!targetSig) {
@@ -107,6 +110,8 @@ export function App() {
           page: targetPage,
           chunkSize: targetChunkSize,
           force,
+          network: targetNetwork,
+          rpcUrl: getNetwork(targetNetwork).rpcUrl,
         }),
       });
 
@@ -181,6 +186,15 @@ export function App() {
     }
   };
 
+  const handleNetworkChange = (newNetwork: NetworkId) => {
+    setNetwork(newNetwork);
+    storeNetwork(newNetwork);
+    // Re-run the tracer against the newly selected cluster
+    if (signature.trim()) {
+      handleAnalyze(signature, 1, chunkSize, true, newNetwork);
+    }
+  };
+
   const handleInstructionClick = (programId: string, functionName?: string) => {
     setSelectedProgramId(programId);
     setSelectedFunctionName(functionName || null);
@@ -189,7 +203,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#0b0c10] text-slate-100 flex flex-col selection:bg-solana-purple selection:text-white">
       {/* Navbar */}
-      <Navbar />
+      <Navbar network={network} onNetworkChange={handleNetworkChange} />
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
