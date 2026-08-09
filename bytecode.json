@@ -1,79 +1,61 @@
 {
-  "signature": "5XemBopqjVw6wUnWhG6gi4M3Cgx2YXgZv1L5Sc3A74HWWy8nW7uMbm2D671aoykzDwkLjsMfLkYk9dTTDWRS9voK",
-  "slot": 438099280,
+  "signature": "4tb5gVF7LHdUnePSdU9nbx7u5EzQDTYsqMbZuSHz5N3cWwP3mPYk4xkZjpz5wzjF5nndA2CZigcnsAQxSLGERGSN",
+  "slot": 438101969,
   "executionStatus": "FAILED ❌",
-  "computeUnits": 92360,
+  "computeUnits": 4713,
   "decodedError": {
-    "code": 6040,
-    "hexCode": "0x1798",
-    "name": "AnchorError::Custom(6040)",
-    "msg": "Custom program execution failure (Error Code: 6040, Hex: 0x1798)"
+    "code": 13,
+    "hexCode": "0x000d",
+    "name": "ProgramError::Custom(13)",
+    "msg": "Execution failure (Error Code: 13)"
   },
   "decodedInstructions": [
     {
-      "programId": "ComputeBudget111111111111111111111111111111",
-      "programLabel": "Compute Budget Program",
-      "name": "SetComputeUnitPrice",
-      "discriminatorHex": "0304290000000000",
-      "decodedArgs": "price: 10500 micro-lamports/CU",
-      "dataHex": "030429000000000000"
+      "programId": "11111111111111111111111111111111",
+      "programLabel": "Solana System Program",
+      "name": "transfer",
+      "discriminatorHex": "",
+      "decodedArgs": "destination: \"2nyhqdwKcJZR2vcqCyrYsaPVdAnFoJjiksCXJ7hfEYgD\", lamports: 1518211, source: \"2KP9miexioqgNbjPwysggcbi3sKqhH8JsPaDmFxRPURD\"",
+      "dataHex": ""
     },
     {
       "programId": "ComputeBudget111111111111111111111111111111",
       "programLabel": "Compute Budget Program",
       "name": "SetComputeUnitLimit",
       "discriminatorHex": "",
-      "decodedArgs": "limit: 150000 CU",
-      "dataHex": "02f0490200"
+      "decodedArgs": "limit: 100000 CU",
+      "dataHex": "02a0860100"
     },
     {
-      "programId": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-      "programLabel": "Associated Token Account Program",
-      "name": "create",
-      "discriminatorHex": "",
-      "decodedArgs": "account: \"DLcqo6orcdrpeb6pwZQfDmddsKkZvqjSgN5rv9CXkAyg\", mint: \"9opbV6wGUVvyPqXPeR1UeFG8Eg3dAfwHmMXbHsp7pump\", source: \"DJhQaqeBj7JvXbQHH3KppGdurS8nxa7kVzzSXHV71CeC\", systemProgram: \"11111111111111111111111111111111\", tokenProgram: \"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb\", wallet: \"DJhQaqeBj7JvXbQHH3KppGdurS8nxa7kVzzSXHV71CeC\"",
-      "dataHex": ""
+      "programId": "ComputeBudget111111111111111111111111111111",
+      "programLabel": "Compute Budget Program",
+      "name": "SetComputeUnitPrice",
+      "discriminatorHex": "033f000000000000",
+      "decodedArgs": "price: 63 micro-lamports/CU",
+      "dataHex": "033f00000000000000"
     },
     {
-      "programId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
-      "programLabel": "Pump.fun AMM Program",
-      "name": "buy_exact_quote_in",
-      "discriminatorHex": "c62e1552b4d9e870",
-      "decodedArgs": "amount_in: 700000000",
-      "dataHex": "c62e1552b4d9e8700027b92900000000f28269b72c01000001"
-    },
-    {
-      "programId": "11111111111111111111111111111111",
-      "programLabel": "Solana System Program",
-      "name": "transfer",
-      "discriminatorHex": "",
-      "decodedArgs": "destination: \"3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT\", lamports: 500000, source: \"DJhQaqeBj7JvXbQHH3KppGdurS8nxa7kVzzSXHV71CeC\"",
-      "dataHex": ""
+      "programId": "DhpyNWkdxFh3DRPsBrwRwrK3TYC5t7Q4arnSvf3t84HY",
+      "programLabel": "Program (DhpyNWkd)",
+      "name": "Deposit (Variant 1)",
+      "discriminatorHex": "01d1e71c1a000000",
+      "decodedArgs": null,
+      "dataHex": "01d1e71c1a0000000001"
     }
   ],
-  "accountValidations": [
-    {
-      "programId": "AnchorFramework",
-      "errorName": "AccountValidationError",
-      "message": "Program log: AnchorError thrown in programs/pump-amm/src/instructions/swap/buy.rs:687. Error Code: BuySlippageBelowMinBaseAmountOut. Error Number: 6040. Error Message: buy: slippage - would buy less tokens than expected min_base_amount_out."
-    }
-  ],
+  "accountValidations": [],
   "failureContext": {
-    "failedProgramId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    "failedProgramId": "DhpyNWkdxFh3DRPsBrwRwrK3TYC5t7Q4arnSvf3t84HY",
     "failedInstructionIndex": 3,
-    "sourceLocation": {
-      "file": "programs/pump-amm/src/instructions/swap/buy.rs",
-      "line": 687,
-      "column": 0
-    },
+    "sourceLocation": null,
     "runtimePc": null,
     "elfAddress": null,
-    "function": "buy_exact_quote_in"
+    "function": "Deposit (Variant 1)"
   },
   "sourceContext": {
     "available": false,
-    "fileName": "src/instructions/swap/buy.rs",
-    "errorLine": 687,
+    "fileName": null,
+    "errorLine": null,
     "sourceLines": []
   }
 }

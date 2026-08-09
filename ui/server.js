@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { analyzePseudocode } from './semanticAnalyzer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -206,12 +207,33 @@ app.get('/api/pseudocode/:programId', async (req, res) => {
 
     try {
       const cCode = await fs.readFile(outPath, 'utf-8');
-      res.json({ success: true, pseudocode: cCode });
+      const semantic = analyzePseudocode(cCode);
+      res.json({ success: true, semantic });
     } catch (readError) {
       console.error(`❌ Error reading Ghidra output: ${readError.message}`);
       res.status(500).json({ success: false, error: 'Decompilation completed but output file could not be read.' });
     }
   });
+});
+
+app.get('/api/pseudocode/:programId/function/:address', async (req, res) => {
+  const { programId, address } = req.params;
+  const outPath = path.join(rootDir, `${programId}_out.c`);
+  try {
+    const cCode = await fs.readFile(outPath, 'utf-8');
+    const semantic = analyzePseudocode(cCode);
+    const func = semantic.functions.find(f => f.address === address);
+    
+    if (!func) {
+      return res.status(404).json({ success: false, error: 'Function not found' });
+    }
+    
+    const lines = cCode.split('\n');
+    const funcCode = lines.slice(func.startLine, func.endLine + 1).join('\n');
+    res.json({ success: true, pseudocode: funcCode });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

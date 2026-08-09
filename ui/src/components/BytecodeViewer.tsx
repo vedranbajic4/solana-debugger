@@ -57,6 +57,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
 
   const vmLogs = chunkData?.vmLogs || '';
   const disassemblyLines = chunkData?.chunkLines || (bytecodeText ? bytecodeText.split('\n') : []);
+  const hasDisassembly = disassemblyLines.some(line => line && line.trim().startsWith('PC ['));
 
   const filteredLines = filterQuery
     ? disassemblyLines.filter(
@@ -175,7 +176,30 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
       )}
 
       {/* CHUNKED SBF DISASSEMBLY STREAM TABLE PANEL */}
-      <div className="glass-panel rounded-2xl overflow-hidden border border-solana-border shadow-2xl">
+      {chunkData && !hasDisassembly ? (
+        <div className="glass-panel p-12 rounded-3xl text-center border-2 border-dashed border-red-500/50 bg-red-950/20 shadow-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-red-500/5 to-transparent pointer-events-none"></div>
+          <Code2 className="w-20 h-20 text-red-400 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)] animate-pulse" />
+          <h3 className="text-3xl font-black text-white mb-4 tracking-tight">No Bytecode Available</h3>
+          <p className="text-lg text-red-200/90 max-w-xl mx-auto leading-relaxed">
+            This transaction signature does not contain any executable SBF bytecode, or the program is a native program / missing debug symbols. 
+            <br/><br/>
+            <strong className="text-red-400 bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">You cannot view the source or assembly code for this transaction.</strong>
+          </p>
+          {onClear && (
+            <div className="mt-10 flex justify-center">
+              <button
+                onClick={onClear}
+                className="px-8 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/50 font-bold tracking-wide transition-all shadow-[0_0_20px_rgba(248,113,113,0.1)] hover:shadow-[0_0_30px_rgba(248,113,113,0.2)] flex items-center space-x-2"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span>Clear Analysis</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="glass-panel rounded-2xl overflow-hidden border border-solana-border shadow-2xl">
         {/* Header Action Bar */}
         <div className="bg-solana-dark/90 px-6 py-3 border-b border-solana-border flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2 font-mono text-xs font-bold text-white">
@@ -406,6 +430,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };

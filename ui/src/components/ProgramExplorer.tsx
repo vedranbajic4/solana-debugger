@@ -133,8 +133,8 @@ function getCategoryIcon(category: string) {
 
 
 export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
+  programId,
   semantic,
-  rawPseudocode,
   isLoading,
   error,
   failureContext,
@@ -143,6 +143,8 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFuncAddr, setSelectedFuncAddr] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [functionCodes, setFunctionCodes] = useState<Record<string, string>>({});
+  const [isLoadingFunc, setIsLoadingFunc] = useState(false);
   const errorLineRef = useRef<HTMLDivElement>(null);
 
   const targetAddrNum = failureContext?.elfAddress;
@@ -166,12 +168,28 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
     }
   }, [semantic, failureContext]);
 
-  // Scroll to error if selected function has it
+  // Fetch function code lazily
+  useEffect(() => {
+    if (selectedFuncAddr && !functionCodes[selectedFuncAddr]) {
+      setIsLoadingFunc(true);
+      fetch(`http://localhost:3001/api/pseudocode/${programId}/function/${selectedFuncAddr}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.pseudocode) {
+            setFunctionCodes(prev => ({ ...prev, [selectedFuncAddr]: data.pseudocode }));
+          }
+        })
+        .catch(err => console.error("Error fetching function code:", err))
+        .finally(() => setIsLoadingFunc(false));
+    }
+  }, [selectedFuncAddr, programId, functionCodes]);
+
+  // Scroll to error if selected function has it and code is loaded
   useEffect(() => {
     if (errorLineRef.current) {
       errorLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [selectedFuncAddr, rawPseudocode]);
+  }, [selectedFuncAddr, functionCodes]);
 
   const toggleCategory = (cat: string) => {
     setCollapsedCategories(prev => {
@@ -183,20 +201,8 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
   };
 
   const getFunctionLines = (func: SemanticFunction) => {
-    if (!rawPseudocode) return [];
-    const allLines = rawPseudocode.split('\n');
-    const startIdx = allLines.findIndex(l => l.includes(`/* Function: ${func.name}`) || l.includes(`@ 0x${func.address}`));
-    if (startIdx === -1) return [];
-    
-    let endIdx = -1;
-    for (let i = startIdx + 1; i < allLines.length; i++) {
-      if (allLines[i].startsWith('/* Function: ')) {
-        endIdx = i;
-        break;
-      }
-    }
-    if (endIdx === -1) endIdx = allLines.length;
-    return allLines.slice(startIdx, endIdx);
+    const code = functionCodes[func.address];
+    return code ? code.split('\n') : [];
   };
 
   const categories = useMemo(() => {
@@ -205,13 +211,11 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
     const query = searchQuery.toLowerCase();
     const filteredFuncs = semantic.functions.filter(f => {
        if (!query) return true;
-       const funcLines = rawPseudocode ? getFunctionLines(f).join('\n').toLowerCase() : '';
        return (
          f.name.toLowerCase().includes(query) ||
          (f.semanticName && f.semanticName.toLowerCase().includes(query)) ||
          f.evidence.some(e => e.toLowerCase().includes(query)) ||
-         f.operations.some(op => op.semantic.toLowerCase().includes(query)) ||
-         funcLines.includes(query)
+         f.operations.some(op => op.semantic.toLowerCase().includes(query))
        );
     });
 
@@ -349,7 +353,6 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                          {cat.functions.map(func => {
                             const isError = checkFunctionHasError(func);
                             const isSelected = selectedFuncAddr === func.address;
-                            const lineCount = getFunctionLines(func).length;
                             return (
                                <div 
                                  key={func.address}
@@ -362,7 +365,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                                >
                                   <span className="truncate pr-2 font-mono flex-1">{func.semanticName || func.name}</span>
                                   <span className={`text-[9px] font-mono whitespace-nowrap ml-2 ${isSelected ? 'text-slate-400' : 'text-slate-600'}`}>
-                                    {lineCount} L
+                                    {func.endLine - func.startLine} L
                                   </span>
                                   {isError && <AlertCircle className="w-3 h-3 text-rose-500 shrink-0 ml-2" />}
                                </div>
@@ -444,6 +447,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center space-x-2">
                        <FileCode2 className="w-3.5 h-3.5" />
                        <span>Raw Pseudocode</span>
+                       {isLoadingFunc && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500 ml-2" />}
                      </h3>
                      {renderRawLines(getFunctionLines(selectedFunc), targetAddrNum, selectedFuncHasError)}
                    </div>

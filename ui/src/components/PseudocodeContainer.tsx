@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { ProgramExplorer } from './ProgramExplorer';
-import { analyzePseudocode } from '../utils/semanticAnalyzer';
 import type { ProgramSemantic } from '../utils/semanticAnalyzer';
 
 interface PseudocodeContainerProps {
@@ -30,14 +29,9 @@ export const PseudocodeContainer: React.FC<PseudocodeContainerProps> = ({
         throw new Error(data.error || 'Failed to decompile program');
       }
       
-      const code = data.pseudocode;
-      setRawPseudocode(code);
-      
-      // Run semantic analysis client-side
-      const result = analyzePseudocode(code);
-      setSemantic(result);
+      setSemantic(data.semantic);
     } catch (err: any) {
-      console.error('Error fetching pseudocode:', err);
+      console.error('Error fetching semantic data:', err);
       setError(err.message || 'Error running Ghidra decompiler');
     } finally {
       setIsLoading(false);
