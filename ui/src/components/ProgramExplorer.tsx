@@ -274,7 +274,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                     : 'hover:bg-white/5 border-l-[3px] border-l-transparent'
                 }`}
               >
-                <span className="inline-block w-8 text-right mr-4 text-slate-600 select-none border-r border-slate-800 pr-2">
+                <span className="inline-block w-10 text-right mr-4 text-slate-400 text-xs font-bold select-none border-r border-slate-700 pr-2">
                   {idx + 1}
                 </span>
                 {highlightC(displayLine)}
@@ -364,7 +364,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                                  }`}
                                >
                                   <span className="truncate pr-2 font-mono flex-1">{func.semanticName || func.name}</span>
-                                  <span className={`text-[9px] font-mono whitespace-nowrap ml-2 ${isSelected ? 'text-slate-400' : 'text-slate-600'}`}>
+                                  <span className={`text-[11px] font-bold font-mono whitespace-nowrap ml-2 ${isSelected ? 'text-slate-200' : 'text-slate-400'}`}>
                                     {func.endLine - func.startLine} L
                                   </span>
                                   {isError && <AlertCircle className="w-3 h-3 text-rose-500 shrink-0 ml-2" />}

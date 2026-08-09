@@ -304,10 +304,10 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             >
               {/* Line Number Gutter */}
               <div
-                className={`w-16 shrink-0 text-right pr-4 py-[3px] select-none ${
+                className={`w-16 shrink-0 text-right pr-4 py-[3px] select-none text-[13px] ${
                   isError
                     ? 'text-rose-400 font-bold bg-rose-950/60'
-                    : 'text-slate-600'
+                    : 'text-slate-400 font-bold'
                 }`}
               >
                 {isError && (
