@@ -268,7 +268,7 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
                           {highlightC(displayLine)}
                           {isBest && (
                             <span className="ml-8 font-bold text-[10px] text-rose-300 uppercase tracking-widest bg-rose-500/30 px-2 py-0.5 rounded border border-rose-500/50">
-                              ← {isExactMatch ? 'ERROR LOCATION' : 'APPROXIMATE LOCATION'}
+                              ❌ {isExactMatch ? 'ERROR LOCATION' : 'APPROXIMATE LOCATION'}
                             </span>
                           )}
                         </div>

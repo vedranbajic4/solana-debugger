@@ -62,6 +62,7 @@ public class DecompileSBPF extends GhidraScript {
                 StringBuilder currentLine = new StringBuilder();
                 long minAddr = -1;
                 long maxAddr = -1;
+                int indentLevel = 0;
                 
                 for (ClangToken token : tokens) {
                     if (token.getMinAddress() != null) {
@@ -71,6 +72,16 @@ public class DecompileSBPF extends GhidraScript {
                     }
                     
                     String text = token.getText();
+                    if (token instanceof ghidra.app.decompiler.ClangBreak) {
+                        ghidra.app.decompiler.ClangBreak brk = (ghidra.app.decompiler.ClangBreak) token;
+                        text = "\n";
+                        for (int ind = 0; ind < brk.getIndent(); ind++) {
+                            text += "    ";
+                        }
+                    } else if (text == null) {
+                        text = "";
+                    }
+                    
                     for (int i = 0; i < text.length(); i++) {
                         char c = text.charAt(i);
                         if (c == '\n') {

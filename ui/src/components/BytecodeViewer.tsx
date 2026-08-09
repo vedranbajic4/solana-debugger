@@ -130,6 +130,9 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
   };
 
   const vmLogLines = vmLogs ? vmLogs.split('\n') : [];
+  const failureContext = chunkData?.analysisSummary?.failureContext;
+  const failingPc = failureContext?.runtimePc != null ? failureContext.runtimePc : failureContext?.elfAddress;
+
 
   return (
     <div className="space-y-6">
@@ -345,17 +348,42 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
                   const asmPart = (parts[2] || '').trim();
                   const dwarfPart = (parts[3] || '').trim();
 
+                  let isFailing = false;
+                  if (failingPc != null) {
+                    const match = pcPart.match(/PC \[\s*0*([0-9a-fA-F]+)\s*\]/);
+                    if (match && parseInt(match[1], 16) === failingPc) {
+                      isFailing = true;
+                    }
+                  }
+
                   return (
-                    <tr key={idx} className="hover:bg-[#141722] transition-colors group">
+                    <tr 
+                      key={idx} 
+                      className={`transition-colors group ${
+                        isFailing ? 'bg-rose-950/60 border-y-[2px] border-y-rose-500 font-bold' : 'hover:bg-[#141722]'
+                      }`}
+                      ref={isFailing ? (el => el?.scrollIntoView({ behavior: 'smooth', block: 'center' })) : undefined}
+                    >
                       <td className="py-2 px-4 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded bg-solana-purple/20 border border-solana-purple/40 text-solana-purple font-semibold text-[11px]">
+                        <span className={`px-2 py-0.5 rounded border text-[11px] ${
+                          isFailing ? 'bg-rose-500/20 border-rose-500/40 text-rose-300' : 'bg-solana-purple/20 border-solana-purple/40 text-solana-purple font-semibold'
+                        }`}>
                           {pcPart}
                         </span>
+                        {isFailing && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-bold animate-pulse">
+                            ❌ FAILING PC
+                          </span>
+                        )}
                       </td>
-                      <td className="py-2 px-4 whitespace-nowrap text-cyan-400/90 font-mono tracking-wider text-[11px]">
+                      <td className={`py-2 px-4 whitespace-nowrap font-mono tracking-wider text-[11px] ${
+                        isFailing ? 'text-rose-200' : 'text-cyan-400/90'
+                      }`}>
                         {hexPart}
                       </td>
-                      <td className="py-2 px-4 font-mono text-[12px]">
+                      <td className={`py-2 px-4 font-mono text-[12px] ${
+                        isFailing ? 'text-rose-100' : ''
+                      }`}>
                         {renderAssemblyInstruction(asmPart)}
                       </td>
                       <td className="py-2 px-4 font-mono text-[11px]">

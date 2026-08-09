@@ -92,22 +92,34 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({
                   key={idx} 
                   onClick={() => onInstructionClick?.(ix.programId, ix.name)}
                   className={`p-3.5 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer
-                    ${isSelected ? 'bg-solana-purple/10 border-solana-purple' : 'bg-[#12141c] border-[#1c1f2b] hover:border-solana-purple/40'}
-                    ${isFailed && !isSelected ? 'border-rose-500/50 bg-rose-950/20' : ''}
+                    ${isFailed 
+                      ? (isSelected ? 'bg-rose-900/40 border-rose-500' : 'bg-rose-950/20 border-rose-500/50 hover:border-rose-500') 
+                      : (isSelected ? 'bg-solana-purple/10 border-solana-purple' : 'bg-[#12141c] border-[#1c1f2b] hover:border-solana-purple/40')
+                    }
                   `}
                 >
                   <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-lg bg-solana-purple/20 border border-solana-purple/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <Cpu className="w-4 h-4 text-solana-purple" />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                    isFailed ? 'bg-rose-500/20 border border-rose-500/40' : 'bg-solana-purple/20 border border-solana-purple/40'
+                  }`}>
+                    <Cpu className={`w-4 h-4 ${isFailed ? 'text-rose-400' : 'text-solana-purple'}`} />
                   </div>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-solana-purple/15 border border-solana-purple/30 text-solana-purple font-semibold text-[10px] flex items-center space-x-1">
+                      <span className={`px-2 py-0.5 rounded border font-semibold text-[10px] flex items-center space-x-1 ${
+                        isFailed ? 'bg-rose-500/15 border-rose-500/30 text-rose-300' : 'bg-solana-purple/15 border-solana-purple/30 text-solana-purple'
+                      }`}>
                         <Layers className="w-3 h-3" />
                         <span>{ix.programLabel || 'Program'}</span>
                       </span>
 
-                      <span className="font-bold text-sm text-solana-green">{ix.name}</span>
+                      <span className={`font-bold text-sm ${isFailed ? 'text-rose-400' : 'text-solana-green'}`}>{ix.name}</span>
+
+                      {isFailed && (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-[10px] animate-pulse">
+                          ❌ FAILED
+                        </span>
+                      )}
 
                       {ix.discriminatorHex && (
                         <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-[10px]">
