@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { FileCode2, MapPin, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { FileCode2, MapPin, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { PseudocodeContainer } from './PseudocodeContainer';
+import { SkeletonBar, SkeletonCodeLines } from './Skeleton';
 
 export interface SourceLineData {
   line: number;
@@ -30,6 +31,7 @@ interface SourceCodeViewerProps {
   failureContext?: FailureContextData | null;
   selectedProgramId?: string | null;
   selectedFunctionName?: string | null;
+  isLoading?: boolean;
 }
 
 // Simple Rust syntax highlighting
@@ -138,6 +140,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   failureContext,
   selectedProgramId,
   selectedFunctionName,
+  isLoading,
 }) => {
   const errorLineRef = useRef<HTMLDivElement>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
@@ -167,6 +170,37 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
       errorLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [sourceContext]);
+
+  // While the tracer runs we do not yet know whether we will get original Rust source
+  // or fall back to pseudocode, so show a neutral code-shaped placeholder.
+  if (isLoading) {
+    return (
+      <div
+        className="bg-[#0b0c10] rounded-xl border border-[#1e2029] overflow-hidden shadow-sm mb-8 font-mono text-sm"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="sr-only">Loading source code</span>
+        <div className="bg-[#121317] px-5 py-3 border-b border-[#1e2029] flex items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 font-bold text-slate-400 uppercase tracking-widest text-xs">
+              <FileCode2 className="w-4 h-4" />
+              <span>Source Code</span>
+            </div>
+            <SkeletonBar className="w-48" />
+          </div>
+          <div className="flex items-center space-x-2 text-[11px] text-slate-500">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Resolving DWARF source mapping...</span>
+          </div>
+        </div>
+        <div className="bg-[#0a0b10]">
+          <SkeletonCodeLines lines={12} />
+        </div>
+      </div>
+    );
+  }
 
   if (!sourceContext && !failureContext && !selectedProgramId) return null;
 

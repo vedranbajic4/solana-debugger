@@ -250,6 +250,7 @@ export function App() {
           failureContext={chunkData?.analysisSummary?.failureContext}
           selectedProgramId={selectedProgramId}
           selectedFunctionName={selectedFunctionName}
+          isLoading={isLoading}
         />
 
         {/* Main Code & Disassembly Viewer */}
@@ -261,6 +262,7 @@ export function App() {
           onJumpToPage={handleJumpToPage}
           onChangeChunkSize={handleChangeChunkSize}
           isNavigatingChunk={isNavigatingChunk}
+          isLoading={isLoading}
           onClear={handleClear}
         />
       </main>

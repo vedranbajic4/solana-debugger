@@ -26,8 +26,81 @@ interface BytecodeViewerProps {
   onJumpToPage?: (page: number) => void;
   onChangeChunkSize?: (size: number) => void;
   isNavigatingChunk?: boolean;
+  isLoading?: boolean;
   onClear?: () => void;
 }
+
+// Shimmering placeholder shown while the tracer runs, mirroring the shape of the
+// VM logs panel and the disassembly table so the layout does not jump on load.
+const SKELETON_ASM_WIDTHS = ['w-3/4', 'w-1/2', 'w-2/3', 'w-5/6', 'w-2/5', 'w-3/5'];
+
+const BytecodeLoadingSkeleton: React.FC = () => (
+  <div className="space-y-6" role="status" aria-live="polite" aria-busy="true">
+    <span className="sr-only">Running SBF tracer, loading bytecode disassembly</span>
+
+    {/* VM Execution Logs placeholder */}
+    <div className="glass-panel rounded-2xl overflow-hidden border border-solana-border shadow-xl">
+      <div className="bg-solana-card/90 px-6 py-3 border-b border-solana-border flex items-center space-x-3 font-mono text-xs">
+        <ScrollText className="w-4 h-4 text-solana-purple animate-pulse" />
+        <span className="font-bold text-white uppercase tracking-wider">VM Execution Logs & Trace</span>
+      </div>
+      <div className="p-4 bg-[#090a0f] space-y-3">
+        {Array.from({ length: 4 }, (_, idx) => (
+          <div key={idx} className="flex items-center space-x-3">
+            <span className="skeleton-bar w-8 flex-shrink-0" />
+            <span className={`skeleton-bar ${SKELETON_ASM_WIDTHS[idx % SKELETON_ASM_WIDTHS.length]}`} />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Disassembly stream placeholder */}
+    <div className="glass-panel rounded-2xl overflow-hidden border border-solana-border shadow-2xl">
+      <div className="bg-solana-dark/90 px-6 py-3 border-b border-solana-border flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center space-x-2 font-mono text-xs font-bold text-white">
+          <Code2 className="w-4 h-4 text-solana-green" />
+          <span>SBF BYTECODE DISASSEMBLY STREAM</span>
+        </div>
+        <div className="flex items-center space-x-2 font-mono text-xs text-solana-purple">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Running SBF tracer...</span>
+        </div>
+      </div>
+
+      <div className="bg-solana-card/80 px-6 py-2.5 border-b border-solana-border text-xs font-mono text-solana-muted">
+        Fetching the transaction over RPC and disassembling program bytecode. The first run may take a
+        while while the tracer binary compiles.
+      </div>
+
+      <div className="bg-[#0a0b10]">
+        <table className="w-full border-collapse">
+          <thead className="bg-[#121317] border-b border-[#1e2029] text-slate-500 text-sm uppercase tracking-widest">
+            <tr>
+              <th className="py-5 px-6 w-48 font-bold text-center">PC (Idx)</th>
+              <th className="py-5 px-6 w-72 font-bold text-center">Raw Bytes (Hex)</th>
+              <th className="py-5 px-6 min-w-[300px] font-bold text-left">Disassembled Assembly</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#1e2029]">
+            {Array.from({ length: 10 }, (_, idx) => (
+              <tr key={idx}>
+                <td className="py-4 px-6">
+                  <span className="skeleton-bar w-24 mx-auto" />
+                </td>
+                <td className="py-4 px-6">
+                  <span className="skeleton-bar w-48 mx-auto" />
+                </td>
+                <td className="py-4 px-6">
+                  <span className={`skeleton-bar ${SKELETON_ASM_WIDTHS[idx % SKELETON_ASM_WIDTHS.length]}`} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
 
 export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
   bytecodeText,
@@ -37,6 +110,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
   onJumpToPage,
   onChangeChunkSize,
   isNavigatingChunk,
+  isLoading,
   onClear,
 }) => {
   const [filterQuery, setFilterQuery] = useState('');
@@ -63,6 +137,12 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
       setSelectedWord(text);
     }
   };
+
+  // A fresh tracer run replaces whatever is on screen, so show the skeleton instead
+  // of stale bytecode from the previous signature.
+  if (isLoading) {
+    return <BytecodeLoadingSkeleton />;
+  }
 
   if (!bytecodeText && !chunkData) {
     return (
@@ -354,8 +434,22 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
         )}
 
         {/* Structured HTML Table Display Area */}
-        <div className="max-h-[650px] overflow-auto font-mono text-base bg-[#0a0b10]" onDoubleClick={handleDoubleClick}>
-          <table className="w-full max-w-6xl mx-auto text-center border-collapse">
+        <div className="relative">
+        {isNavigatingChunk && (
+          <div className="absolute inset-0 z-20 bg-[#0a0b10]/70 backdrop-blur-[2px] flex items-start justify-center pt-24">
+            <div className="flex items-center space-x-3 px-5 py-3 rounded-xl bg-solana-card border border-solana-border shadow-xl font-mono text-xs text-slate-200">
+              <Loader2 className="w-4 h-4 text-solana-purple animate-spin" />
+              <span>Loading chunk{chunkData ? ` ${chunkData.page} / ${chunkData.totalPages}` : ''}...</span>
+            </div>
+          </div>
+        )}
+        <div
+          className={`max-h-[650px] overflow-auto font-mono text-base bg-[#0a0b10] transition-opacity ${
+            isNavigatingChunk ? 'opacity-40' : 'opacity-100'
+          }`}
+          onDoubleClick={handleDoubleClick}
+        >
+          <table className="w-full text-center border-collapse">
             <thead className="sticky top-0 bg-[#121317] z-10 shadow-sm border-b border-[#1e2029] text-slate-500 text-sm uppercase tracking-widest">
               <tr>
                 <th className="py-5 px-6 w-48 shrink-0 font-bold text-center">PC (Idx)</th>
@@ -451,6 +545,7 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
               })}
             </tbody>
           </table>
+        </div>
         </div>
       </div>
       )}
