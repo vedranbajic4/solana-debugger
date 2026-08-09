@@ -28,7 +28,7 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({
     <div className="space-y-4 mb-6 font-mono text-xs">
       {/* Decoded Anchor Error Banner */}
       {decodedError && (
-        <div className="glass-panel p-5 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-lg glow-purple">
+        <div className="glass-panel p-5 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-sm">
           <div className="flex items-start space-x-3">
             <ShieldAlert className="w-6 h-6 text-rose-400 shrink-0 mt-0.5" />
             <div className="flex-1 space-y-2">
@@ -116,8 +116,8 @@ export const AnchorAnalysisCard: React.FC<AnchorAnalysisCardProps> = ({
                       <span className={`font-bold text-sm ${isFailed ? 'text-rose-400' : 'text-solana-green'}`}>{ix.name}</span>
 
                       {isFailed && (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-[10px] animate-pulse">
-                          ❌ FAILED
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold text-[10px]">
+                          FAILED
                         </span>
                       )}
 

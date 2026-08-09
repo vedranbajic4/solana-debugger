@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { FileCode2, MapPin, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { PseudocodeViewer } from './PseudocodeViewer';
+import { PseudocodeContainer } from './PseudocodeContainer';
 
 export interface SourceLineData {
   line: number;
@@ -152,7 +152,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   // If source is not available, show a minimal info card
   if (sourceContext && !sourceContext.available) {
     return (
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-lg glow-purple mb-6 font-mono text-xs">
+      <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-sm mb-6 font-mono text-xs">
         <div className="flex items-center space-x-3 text-rose-400 mb-4">
           <EyeOff className="w-6 h-6 shrink-0" />
           <span className="font-bold text-lg text-rose-300 uppercase tracking-wider">
@@ -160,7 +160,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
           </span>
         </div>
         <p className="text-slate-400 text-xs leading-relaxed">
-          This program was built as a <span className="text-amber-300">release binary without debug symbols</span>.
+          This program was built as a <span className="text-slate-300">release binary without debug symbols</span>.
           Instead of original Rust source, we are displaying human-readable C-like pseudocode inferred from the sBPF bytecode below.
         </p>
         {failureContext?.failedProgramId && (
@@ -181,7 +181,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
         
         {targetProgramId && (
           <div className="mt-4">
-            <PseudocodeViewer 
+            <PseudocodeContainer 
               programId={targetProgramId} 
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
               autoExpand={true}
@@ -226,7 +226,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             <div className="mb-2 text-slate-400">
               Selected Program: <span className="text-cyan-400 font-semibold">{targetProgramId}</span>
             </div>
-            <PseudocodeViewer 
+            <PseudocodeContainer 
               programId={targetProgramId}
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
               autoExpand={true}
@@ -244,7 +244,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
       <div className="bg-[#12141d] px-6 py-3 border-b border-[#1c1f2b] flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2 font-bold text-white uppercase tracking-wider">
-            <FileCode2 className="w-4 h-4 text-solana-green" />
+            <FileCode2 className="w-4 h-4 text-slate-400" />
             <span>Source Code</span>
           </div>
 
@@ -280,7 +280,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
       {/* Ghidra Pseudocode Fallback/Alternative */}
       {targetProgramId && (
         <div className="bg-[#0b0c10] border-b border-[#1c1f2b] p-4">
-          <PseudocodeViewer 
+          <PseudocodeContainer 
             programId={targetProgramId}
             failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
             autoExpand={false}
@@ -329,8 +329,8 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
               {/* Error PC Badge */}
               {isError && (
                 <div className="shrink-0 flex items-center pr-4">
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-bold animate-pulse">
-                    ← ERROR
+                  <span className="px-2 py-0.5 rounded bg-rose-950 border border-rose-900 text-rose-400 text-[10px] font-bold">
+                    ERROR
                   </span>
                 </div>
               )}

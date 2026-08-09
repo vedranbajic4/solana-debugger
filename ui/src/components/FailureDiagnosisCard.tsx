@@ -10,15 +10,14 @@ export const FailureDiagnosisCard: React.FC<FailureDiagnosisCardProps> = ({ diag
   if (!diagnosis) return null;
 
   return (
-    <div className="glass-panel p-6 rounded-2xl border border-rose-500/50 bg-rose-950/10 shadow-xl shadow-rose-900/20 mb-6 font-mono text-xs relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+    <div className="glass-panel p-6 rounded-lg border border-rose-900/50 bg-rose-950/10 mb-6 font-mono text-xs relative overflow-hidden">
+      {/* Background removed for professional look */}
 
       {/* Header */}
       <div className="flex items-center space-x-3 text-rose-400 mb-6 border-b border-rose-500/20 pb-4">
-        <AlertTriangle className="w-7 h-7 shrink-0 animate-pulse" />
-        <span className="font-bold text-xl uppercase tracking-widest text-rose-300">
-          ❌ Transaction Failed
+        <AlertTriangle className="w-7 h-7 shrink-0" />
+        <span className="font-bold text-lg uppercase tracking-widest text-rose-400">
+          Transaction Failed
         </span>
       </div>
 
@@ -60,20 +59,20 @@ export const FailureDiagnosisCard: React.FC<FailureDiagnosisCardProps> = ({ diag
 
         {/* Right Column: Where */}
         <div 
-          className="bg-[#050608] rounded-xl border border-rose-500/20 p-5 relative cursor-pointer hover:border-rose-500/50 hover:bg-[#0a0b0e] transition-colors group"
+          className="bg-[#050608] rounded-xl border border-rose-900/50 p-5 relative cursor-pointer hover:border-rose-700/50 hover:bg-[#0a0b0e] transition-colors group"
           onClick={() => {
             const el = document.getElementById('pseudocode-error-line');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }}
           title="Click to view in pseudocode"
         >
-          <div className="absolute -top-3 left-4 bg-rose-900/40 border border-rose-500/30 px-3 py-1 rounded-full text-[10px] text-rose-300 font-bold uppercase tracking-widest group-hover:bg-rose-900/60 transition-colors">
+          <div className="absolute -top-3 left-4 bg-rose-900/40 border border-rose-900/30 px-3 py-1 rounded-full text-[10px] text-rose-300 font-bold uppercase tracking-widest group-hover:bg-rose-900/60 transition-colors">
             Most likely location
           </div>
           
           <div className="space-y-4 mt-2">
-            <div className="flex items-start space-x-3">
-              <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5 group-hover:animate-bounce" />
+            <div className="flex items-start space-x-3 mb-4">
+              <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               <div className="space-y-2 text-sm">
                 
                 {diagnosis.programId && (
