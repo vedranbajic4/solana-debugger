@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Cpu, ExternalLink, ChevronDown, Check } from 'lucide-react';
+import { ExternalLink, ChevronDown, Check } from 'lucide-react';
 import { NETWORKS, getNetwork, explorerUrl, type NetworkId } from '../networks';
 
 interface NavbarProps {
@@ -41,14 +41,10 @@ export const Navbar: React.FC<NavbarProps> = ({ network, onNetworkChange }) => {
     <header className="border-b border-solana-border glass-panel sticky top-0 z-50 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-solana-purple to-solana-green p-[2px] glow-purple">
-            <div className="w-full h-full bg-solana-dark rounded-[10px] flex items-center justify-center">
-              <Cpu className="w-5 h-5 text-solana-green" />
-            </div>
-          </div>
+          <img src="/logo.svg" alt="Solvbana logo" className="w-10 h-10 object-contain" />
           <div>
-            <h1 className="font-bold text-lg bg-gradient-to-r from-white via-slate-200 to-solana-green bg-clip-text text-transparent">
-              Solana Debugger & SBF Tracer
+            <h1 className="font-bold text-lg tracking-widest bg-gradient-to-r from-white via-slate-200 to-solana-green bg-clip-text text-transparent">
+              SOLVBANA
             </h1>
             <p className="text-xs text-solana-muted">Low-Level Bytecode & DWARF Line Inspector</p>
           </div>

@@ -8,7 +8,7 @@ import { SourceCodeViewer } from './components/SourceCodeViewer';
 import { FailureDiagnosisCard } from './components/FailureDiagnosisCard';
 import { generateDiagnosis, type FailureDiagnosis } from './utils/diagnosis';
 import { getNetwork, loadStoredNetwork, storeNetwork, type NetworkId } from './networks';
-import { AlertCircle, Cpu } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export interface DecodedError {
   code: number;
@@ -270,9 +270,8 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-solana-border py-6 text-center text-xs font-mono text-solana-muted glass-panel mt-12">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between px-6 gap-2">
-          <div className="flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-solana-green" />
-            <span>Solana Debugger & SBF Tracer Engine (Agave / solana-sdk)</span>
+          <div className="flex items-center">
+            <span><span className="text-solana-purple font-bold">SOLVBANA</span> — SBF Tracer Engine (Agave / solana-sdk)</span>
           </div>
           <div>Bytecode Iterator & Anchor IDL Decoder Active</div>
         </div>
