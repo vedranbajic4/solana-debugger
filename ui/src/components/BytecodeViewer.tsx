@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Copy,
   Check,
@@ -42,6 +42,27 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
   const [filterQuery, setFilterQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [showLogs, setShowLogs] = useState(true);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClick = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.toString().trim() === '') {
+        setSelectedWord(null);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  const handleDoubleClick = () => {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const text = selection.toString().trim();
+    if (text && /^[a-zA-Z0-9_]+$/.test(text)) {
+      setSelectedWord(text);
+    }
+  };
 
   if (!bytecodeText && !chunkData) {
     return (
@@ -101,31 +122,37 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
 
   const renderAssemblyInstruction = (asmText: string) => {
     const trimmed = asmText.trim();
-    if (trimmed.startsWith('if')) {
-      return <span className="text-amber-400 font-semibold">{trimmed}</span>;
+    
+    let isControlFlow = false;
+    if (
+      trimmed.startsWith('if') ||
+      trimmed.startsWith('call') ||
+      trimmed.startsWith('exit') ||
+      trimmed.startsWith('return') ||
+      trimmed.startsWith('jmp') ||
+      trimmed.startsWith('goto')
+    ) {
+      isControlFlow = true;
     }
-    if (trimmed.startsWith('call')) {
-      return <span className="text-blue-400 font-bold">{trimmed}</span>;
-    }
-    if (trimmed.startsWith('exit') || trimmed.startsWith('return')) {
-      return <span className="text-rose-400 font-bold">{trimmed}</span>;
-    }
-    if (trimmed.startsWith('jmp') || trimmed.startsWith('goto')) {
-      return <span className="text-cyan-400 font-semibold">{trimmed}</span>;
-    }
-    return <span className="text-solana-green font-medium">{trimmed}</span>;
-  };
 
-  const renderDwarfMapping = (dwarfText: string) => {
-    const trimmed = dwarfText.trim();
-    if (!trimmed || trimmed === 'no_dwarf_symbol') {
-      return <span className="text-slate-600 font-mono text-[11px] select-none">—</span>;
+    if (!selectedWord) {
+      if (isControlFlow) {
+        return <span className="text-cyan-400 font-bold">{trimmed}</span>;
+      }
+      return <span className="text-slate-300">{trimmed}</span>;
     }
-    const cleanPath = trimmed.replace(/^📍\s*/, '');
+
+    const regex = new RegExp(`\\b(${selectedWord})\\b`, 'g');
+    const parts = trimmed.split(regex);
+    
     return (
-      <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono">
-        <FileCode className="w-3 h-3 text-amber-400 shrink-0" />
-        <span className="truncate">{cleanPath}</span>
+      <span className={isControlFlow ? "text-cyan-400 font-bold" : "text-slate-300"}>
+        {parts.map((part, i) => {
+          if (part === selectedWord) {
+            return <span key={i} className="bg-slate-700/60 text-slate-200 px-0.5 rounded">{part}</span>;
+          }
+          return <span key={i}>{part}</span>;
+        })}
       </span>
     );
   };
@@ -327,25 +354,24 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
         )}
 
         {/* Structured HTML Table Display Area */}
-        <div className="max-h-[650px] overflow-auto font-mono text-xs bg-[#0e1017]">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 bg-[#12141d] z-10 shadow-md border-b border-[#1c1f2b] text-solana-muted text-[11px] uppercase tracking-wider">
+        <div className="max-h-[650px] overflow-auto font-mono text-base bg-[#0a0b10]" onDoubleClick={handleDoubleClick}>
+          <table className="w-full max-w-6xl mx-auto text-center border-collapse">
+            <thead className="sticky top-0 bg-[#121317] z-10 shadow-sm border-b border-[#1e2029] text-slate-500 text-sm uppercase tracking-widest">
               <tr>
-                <th className="py-3 px-4 w-32 shrink-0">PC (Idx)</th>
-                <th className="py-3 px-4 w-60 shrink-0">Raw Bytes (Hex)</th>
-                <th className="py-3 px-4 min-w-[280px]">Disassembled Assembly</th>
-                <th className="py-3 px-4">Mapped Source Line (DWARF)</th>
+                <th className="py-5 px-6 w-48 shrink-0 font-bold text-center">PC (Idx)</th>
+                <th className="py-5 px-6 w-72 shrink-0 font-bold text-center">Raw Bytes (Hex)</th>
+                <th className="py-5 px-6 min-w-[300px] font-bold text-left">Disassembled Assembly</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#181b26]">
+            <tbody className="divide-y divide-[#1e2029]">
               {filteredLines.map((line, idx) => {
                 if (!line) return null;
 
                 // Handle Program Banner line
                 if (line.startsWith('📍 PROGRAM ID:')) {
                   return (
-                    <tr key={idx} className="bg-[#13101c] border-y border-[#262035]">
-                      <td colSpan={4} className="py-3 px-4 font-bold text-solana-green">
+                    <tr key={idx} className="bg-[#121317] border-y border-[#1e2029]">
+                      <td colSpan={3} className="py-4 px-6 font-bold text-slate-400">
                         <div className="flex items-center space-x-2">
                           <Cpu className="w-4 h-4 text-solana-purple" />
                           <span>{line}</span>
@@ -384,34 +410,31 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
                     <tr 
                       key={idx} 
                       className={`transition-colors group ${
-                        isFailing ? 'bg-rose-950/60 border-y-[2px] border-y-rose-500 font-bold' : 'hover:bg-[#141722]'
+                        isFailing ? 'bg-[#1a0f12] border-y border-red-900/40' : 'hover:bg-[#121317]'
                       }`}
                       ref={isFailing ? (el => el?.scrollIntoView({ behavior: 'smooth', block: 'center' })) : undefined}
                     >
-                      <td className="py-2 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded border text-[11px] ${
-                          isFailing ? 'bg-rose-500/20 border-rose-500/40 text-rose-300' : 'bg-solana-purple/20 border-solana-purple/40 text-solana-purple font-semibold'
+                      <td className="py-4 px-6 whitespace-nowrap text-center">
+                        <span className={`px-3 py-1 rounded text-base ${
+                          isFailing ? 'text-red-400 font-bold' : 'text-slate-500'
                         }`}>
                           {pcPart}
                         </span>
                         {isFailing && (
-                          <span className="ml-2 px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-bold animate-pulse">
-                            ❌ FAILING PC
+                          <span className="ml-4 text-red-400 text-xs font-bold uppercase tracking-widest border border-red-900/50 bg-red-950/20 px-3 py-1 rounded">
+                            Failed PC
                           </span>
                         )}
                       </td>
-                      <td className={`py-2 px-4 whitespace-nowrap font-mono tracking-wider text-[11px] ${
-                        isFailing ? 'text-rose-200' : 'text-cyan-400/90'
+                      <td className={`py-4 px-6 whitespace-nowrap font-mono tracking-wider text-base text-center ${
+                        isFailing ? 'text-red-300' : 'text-slate-500'
                       }`}>
                         {hexPart}
                       </td>
-                      <td className={`py-2 px-4 font-mono text-[12px] ${
-                        isFailing ? 'text-rose-100' : ''
+                      <td className={`py-4 px-6 font-mono text-base text-left ${
+                        isFailing && !selectedWord ? 'text-red-200' : 'text-slate-300'
                       }`}>
                         {renderAssemblyInstruction(asmPart)}
-                      </td>
-                      <td className="py-2 px-4 font-mono text-[11px]">
-                        {renderDwarfMapping(dwarfPart)}
                       </td>
                     </tr>
                   );
@@ -419,8 +442,8 @@ export const BytecodeViewer: React.FC<BytecodeViewerProps> = ({
 
                 // Default text row for any unparsed metadata line
                 return (
-                  <tr key={idx} className="hover:bg-solana-card/40 transition-colors text-slate-300">
-                    <td colSpan={4} className="py-2 px-4">
+                  <tr key={idx} className="hover:bg-[#121317] transition-colors text-slate-400">
+                    <td colSpan={3} className="py-4 px-6 text-base text-center">
                       {line}
                     </td>
                   </tr>

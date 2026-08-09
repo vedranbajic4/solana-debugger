@@ -16,7 +16,7 @@ interface ProgramExplorerProps {
   onFetch: () => void;
 }
 
-export function highlightC(text: string): React.ReactNode[] {
+export function highlightC(text: string, selectedWord: string | null): React.ReactNode[] {
   const tokens: { type: string; value: string }[] = [];
   let idx = 0;
   while (idx < text.length) {
@@ -79,6 +79,9 @@ export function highlightC(text: string): React.ReactNode[] {
   }
 
   return tokens.map((tok, i) => {
+    if (selectedWord && tok.value === selectedWord) {
+      return <span key={i} className="bg-slate-700/60 text-slate-200 px-0.5 rounded">{tok.value}</span>;
+    }
     switch (tok.type) {
       case 'keyword': return <span key={i} style={{ color: '#c792ea' }}>{tok.value}</span>;
       case 'type': return <span key={i} style={{ color: '#ffcb6b' }}>{tok.value}</span>;
@@ -145,7 +148,28 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [functionCodes, setFunctionCodes] = useState<Record<string, string>>({});
   const [isLoadingFunc, setIsLoadingFunc] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const errorLineRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.toString().trim() === '') {
+        setSelectedWord(null);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  const handleDoubleClick = () => {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const text = selection.toString().trim();
+    if (text && /^[a-zA-Z0-9_]+$/.test(text)) {
+      setSelectedWord(text);
+    }
+  };
 
   const targetAddrNum = failureContext?.elfAddress;
   const targetFunc = failureContext?.function;
@@ -240,7 +264,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
 
   const renderRawLines = (lines: string[], highlightAddr?: number, approximateFuncMatch?: boolean) => {
     return (
-      <div className="text-[11px] font-mono text-slate-300 overflow-x-auto bg-[#050608] rounded-xl border border-[#1c1f2b] custom-scrollbar py-2">
+      <div className="text-[11px] font-mono text-slate-300 overflow-x-auto bg-[#050608] rounded-xl border border-[#1c1f2b] custom-scrollbar py-2" onDoubleClick={handleDoubleClick}>
         {lines.map((line, idx) => {
           let isBest = false;
           let isExactMatch = false;
@@ -277,7 +301,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                 <span className="inline-block w-10 text-right mr-4 text-slate-400 text-xs font-bold select-none border-r border-slate-700 pr-2">
                   {idx + 1}
                 </span>
-                {highlightC(displayLine)}
+                {highlightC(displayLine, selectedWord)}
                 {isBest && (
                   <span className="ml-8 font-bold text-[10px] text-rose-300 uppercase tracking-widest bg-rose-950 border border-rose-900/50 px-2 py-0.5 rounded">
                     {isExactMatch ? 'ERROR LOCATION' : 'APPROXIMATE LOCATION'}
