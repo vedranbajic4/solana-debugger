@@ -25,6 +25,15 @@ use debugger::{
 };
 
 fn get_rpc_client(sig_str: &str) -> RpcClient {
+    // An explicit endpoint (set by the UI's network selector) wins over auto-detection.
+    if let Ok(url) = env::var("SOLANA_RPC_URL") {
+        let url = url.trim().to_string();
+        if !url.is_empty() {
+            println!("🌐 Using RPC endpoint: {}", url);
+            return RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
+        }
+    }
+
     let local_rpc = RpcClient::new_with_commitment(
         "http://127.0.0.1:8899".to_string(),
         CommitmentConfig::confirmed(),
@@ -91,7 +100,7 @@ fn main() -> Result<()> {
     let tx_meta = match tx_meta_result {
         Ok(meta) => meta,
         Err(e) => {
-            println!("❌ Transaction not found on any network (Localhost, Devnet, Mainnet).");
+            println!("❌ Transaction not found at RPC endpoint {}.", rpc_client.url());
             println!("   RPC Error: {}", e);
             let dummy_analysis = AnalysisSummary {
                 signature: target_sig.clone(),
