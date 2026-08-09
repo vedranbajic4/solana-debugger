@@ -5,15 +5,25 @@ import ghidra.program.model.listing.*;
 import ghidra.program.model.data.*;
 import ghidra.program.model.symbol.*;
 import ghidra.program.model.lang.Register;
+import ghidra.app.decompiler.ClangNode;
+import ghidra.app.decompiler.ClangToken;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.List;
 
 public class DecompileSBPF extends GhidraScript {
 
     private void defineSolanaTypes() throws Exception {
-        DataTypeManager dtm = currentProgram.getDataTypeManager();
-        // ... (Types are defined in Ghidra for analysis)
+        // Just empty for now to match original if needed
+    }
+
+    private void traverseTokens(ClangNode node, ArrayList<ClangToken> tokens) {
+        if (node instanceof ClangToken) {
+            tokens.add((ClangToken) node);
+        } else {
+            for (int i = 0; i < node.numChildren(); i++) {
+                traverseTokens(node.Child(i), tokens);
+            }
+        }
     }
 
     @Override
@@ -36,7 +46,6 @@ public class DecompileSBPF extends GhidraScript {
         while (functions.hasNext()) {
             Function func = functions.next();
             
-            // Rename functions heuristically if they match Solana patterns, but we will mostly rely on post-processing
             String funcName = func.getName();
             if (funcName.startsWith("FUN_ram_")) {
                 funcName = funcName.replace("FUN_ram_000", "sub_0x");
@@ -45,8 +54,55 @@ public class DecompileSBPF extends GhidraScript {
             
             writer.println("/* Function: " + funcName + " @ 0x" + Long.toHexString(func.getEntryPoint().getOffset()) + " */");
             DecompileResults results = decompiler.decompileFunction(func, 30, monitor);
-            if (results != null && results.getDecompiledFunction() != null) {
-                String cCode = results.getDecompiledFunction().getC();
+            if (results != null && results.getDecompiledFunction() != null && results.getCCodeMarkup() != null) {
+                ArrayList<ClangToken> tokens = new ArrayList<>();
+                traverseTokens(results.getCCodeMarkup(), tokens);
+                
+                StringBuilder sb = new StringBuilder();
+                StringBuilder currentLine = new StringBuilder();
+                long minAddr = -1;
+                long maxAddr = -1;
+                int indentLevel = 0;
+                
+                for (ClangToken token : tokens) {
+                    if (token.getMinAddress() != null) {
+                        long offset = token.getMinAddress().getOffset();
+                        if (minAddr == -1 || offset < minAddr) minAddr = offset;
+                        if (maxAddr == -1 || offset > maxAddr) maxAddr = offset;
+                    }
+                    
+                    String text = token.getText();
+                    if (token instanceof ghidra.app.decompiler.ClangBreak) {
+                        ghidra.app.decompiler.ClangBreak brk = (ghidra.app.decompiler.ClangBreak) token;
+                        text = "\n";
+                        for (int ind = 0; ind < brk.getIndent(); ind++) {
+                            text += "    ";
+                        }
+                    } else if (text == null) {
+                        text = "";
+                    }
+                    
+                    for (int i = 0; i < text.length(); i++) {
+                        char c = text.charAt(i);
+                        if (c == '\n') {
+                            if (minAddr != -1) {
+                                currentLine.append(" // @ 0x").append(Long.toHexString(minAddr));
+                                if (maxAddr != -1 && maxAddr != minAddr) {
+                                    currentLine.append("-0x").append(Long.toHexString(maxAddr));
+                                }
+                            }
+                            sb.append(currentLine.toString()).append("\n");
+                            currentLine.setLength(0);
+                            minAddr = -1;
+                            maxAddr = -1;
+                        } else {
+                            currentLine.append(c);
+                        }
+                    }
+                }
+                sb.append(currentLine.toString());
+                
+                String cCode = sb.toString();
                 
                 // 1. Basic Type Cleanup
                 cCode = cCode.replace("undefined8", "uint64_t");
@@ -61,17 +117,14 @@ public class DecompileSBPF extends GhidraScript {
                 cCode = cCode.replaceAll("FUN_ram_000([0-9a-fA-F]+)", "sub_0x$1");
                 cCode = cCode.replaceAll("FUN_ram_00([0-9a-fA-F]+)", "sub_0x$1");
                 
-                // Entrypoint signature
                 cCode = cCode.replace("uint64_t entrypoint(uint64_t param_1)", "uint64_t entrypoint(uint8_t *input)");
                 cCode = cCode.replace("param_1", "input");
                 
-                // Account context pointer arithmetic to field accesses
                 cCode = cCode.replace("**(int64_t **)(input + 8) - 1", "((AccountContext *)input)->ref_count--");
                 cCode = cCode.replace("*(int64_t **)(input + 8)", "((AccountContext *)input)->ref_count");
                 cCode = cCode.replace("*(uint64_t **)(input + 8)", "((AccountContext *)input)->ref_count");
                 cCode = cCode.replace("input + 8", "&((AccountContext *)input)->ref_count");
                 
-                // 3. Meaningful function names based on syscalls or panic
                 if (cCode.contains("sol_panic_") || cCode.contains("custom_panic")) {
                     cCode = cCode.replace(funcName, "panic_handler");
                 } else if (cCode.contains("sol_invoke_signed_c")) {
@@ -80,7 +133,6 @@ public class DecompileSBPF extends GhidraScript {
                     cCode = cCode.replace(funcName, "release_account_resources");
                 }
                 
-                // Rename vars to readable equivalents if we know what they are
                 cCode = cCode.replaceAll("lVar([0-9]+)", "local_var_$1");
                 cCode = cCode.replaceAll("uVar([0-9]+)", "local_uvar_$1");
                 cCode = cCode.replaceAll("bVar([0-9]+)", "is_valid_$1");

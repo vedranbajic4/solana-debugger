@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FileCode2, MapPin, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { PseudocodeViewer } from './PseudocodeViewer';
+import { PseudocodeContainer } from './PseudocodeContainer';
 
 export interface SourceLineData {
   line: number;
@@ -33,7 +33,7 @@ interface SourceCodeViewerProps {
 }
 
 // Simple Rust syntax highlighting
-function highlightRust(text: string): React.ReactNode[] {
+function highlightRust(text: string, selectedWord: string | null): React.ReactNode[] {
   // Tokenize by splitting on patterns
   const tokens: { type: string; value: string }[] = [];
   let idx = 0;
@@ -111,21 +111,24 @@ function highlightRust(text: string): React.ReactNode[] {
   }
 
   return tokens.map((tok, i) => {
+    if (selectedWord && tok.value === selectedWord) {
+      return <span key={i} className="bg-slate-700/60 text-slate-200 px-0.5 rounded">{tok.value}</span>;
+    }
     switch (tok.type) {
       case 'keyword':
-        return <span key={i} style={{ color: '#c792ea' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-300 font-bold">{tok.value}</span>;
       case 'builtin':
-        return <span key={i} style={{ color: '#82aaff' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-400">{tok.value}</span>;
       case 'string':
-        return <span key={i} style={{ color: '#c3e88d' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-500 italic">{tok.value}</span>;
       case 'comment':
-        return <span key={i} style={{ color: '#546e7a', fontStyle: 'italic' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-600 italic">{tok.value}</span>;
       case 'decorator':
-        return <span key={i} style={{ color: '#ffcb6b' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-400 font-bold">{tok.value}</span>;
       case 'number':
-        return <span key={i} style={{ color: '#f78c6c' }}>{tok.value}</span>;
+        return <span key={i} className="text-slate-300">{tok.value}</span>;
       default:
-        return <span key={i}>{tok.value}</span>;
+        return <span key={i} className="text-slate-400">{tok.value}</span>;
     }
   });
 }
@@ -137,6 +140,27 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   selectedFunctionName,
 }) => {
   const errorLineRef = useRef<HTMLDivElement>(null);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClick = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.toString().trim() === '') {
+        setSelectedWord(null);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  const handleDoubleClick = () => {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const text = selection.toString().trim();
+    if (text && /^[a-zA-Z0-9_]+$/.test(text)) {
+      setSelectedWord(text);
+    }
+  };
 
   useEffect(() => {
     if (errorLineRef.current) {
@@ -152,7 +176,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
   // If source is not available, show a minimal info card
   if (sourceContext && !sourceContext.available) {
     return (
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-lg glow-purple mb-6 font-mono text-xs">
+      <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-rose-500 bg-rose-950/20 border-rose-500/30 shadow-sm mb-6 font-mono text-xs">
         <div className="flex items-center space-x-3 text-rose-400 mb-4">
           <EyeOff className="w-6 h-6 shrink-0" />
           <span className="font-bold text-lg text-rose-300 uppercase tracking-wider">
@@ -160,7 +184,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
           </span>
         </div>
         <p className="text-slate-400 text-xs leading-relaxed">
-          This program was built as a <span className="text-amber-300">release binary without debug symbols</span>.
+          This program was built as a <span className="text-slate-300">release binary without debug symbols</span>.
           Instead of original Rust source, we are displaying human-readable C-like pseudocode inferred from the sBPF bytecode below.
         </p>
         {failureContext?.failedProgramId && (
@@ -181,7 +205,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
         
         {targetProgramId && (
           <div className="mt-4">
-            <PseudocodeViewer 
+            <PseudocodeContainer 
               programId={targetProgramId} 
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
               autoExpand={true}
@@ -226,7 +250,7 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
             <div className="mb-2 text-slate-400">
               Selected Program: <span className="text-cyan-400 font-semibold">{targetProgramId}</span>
             </div>
-            <PseudocodeViewer 
+            <PseudocodeContainer 
               programId={targetProgramId}
               failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
               autoExpand={true}
@@ -239,39 +263,34 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
 
   // Full source code viewer with highlighted error line
   return (
-    <div className="glass-panel rounded-2xl border border-[#1e222d] overflow-hidden shadow-xl mb-6 font-mono text-xs">
+    <div className="bg-[#0b0c10] rounded-xl border border-[#1e2029] overflow-hidden shadow-sm mb-8 font-mono text-sm" onDoubleClick={handleDoubleClick}>
       {/* File Tab Header */}
-      <div className="bg-[#12141d] px-6 py-3 border-b border-[#1c1f2b] flex items-center justify-between">
+      <div className="bg-[#121317] px-5 py-3 border-b border-[#1e2029] flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 font-bold text-white uppercase tracking-wider">
-            <FileCode2 className="w-4 h-4 text-solana-green" />
+          <div className="flex items-center space-x-2 font-bold text-slate-400 uppercase tracking-widest text-xs">
+            <FileCode2 className="w-4 h-4" />
             <span>Source Code</span>
           </div>
 
           {sourceContext.fileName && (
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#1a1d28] border border-[#252836]">
-              <span className="text-cyan-300">{sourceContext.fileName}</span>
+            <div className="flex items-center space-x-2 px-3 py-1 rounded bg-[#15171d] border border-[#2a2d36] text-xs">
+              <span className="text-slate-300">{sourceContext.fileName}</span>
               {sourceContext.errorLine && (
-                <span className="text-rose-400 font-semibold">:L{sourceContext.errorLine}</span>
+                <span className="text-red-400 font-semibold">:L{sourceContext.errorLine}</span>
               )}
             </div>
           )}
-        </div>
-
-        <div className="flex items-center space-x-2 text-[10px] text-solana-muted">
-          <Eye className="w-3 h-3" />
-          <span>DWARF .debug_line Mapping</span>
         </div>
       </div>
 
       {/* Failure Context Summary Bar */}
       {failureContext?.failedProgramId && (
-        <div className="bg-rose-950/30 border-b border-rose-500/20 px-6 py-2 flex items-center space-x-3 text-xs">
-          <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-          <span className="text-rose-300">
-            Program <span className="font-bold text-rose-200">{failureContext.failedProgramId.slice(0, 8)}...</span> failed
+        <div className="bg-[#1a0f12] border-b border-red-900/40 px-5 py-2 flex items-center space-x-3 text-xs">
+          <AlertCircle className="w-4 h-4 text-red-500/80" />
+          <span className="text-red-300/90">
+            Program <span className="font-bold text-red-200">{failureContext.failedProgramId.slice(0, 8)}...</span> failed
             {failureContext.failedInstructionIndex !== undefined && (
-              <> at instruction <span className="font-bold text-rose-200">#{failureContext.failedInstructionIndex}</span></>
+              <> at instruction <span className="font-bold text-red-200">#{failureContext.failedInstructionIndex}</span></>
             )}
           </span>
         </div>
@@ -279,8 +298,8 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
 
       {/* Ghidra Pseudocode Fallback/Alternative */}
       {targetProgramId && (
-        <div className="bg-[#0b0c10] border-b border-[#1c1f2b] p-4">
-          <PseudocodeViewer 
+        <div className="bg-[#0b0c10] border-b border-[#1e2029] p-4">
+          <PseudocodeContainer 
             programId={targetProgramId}
             failureContext={isSelectedFailing ? failureContext : { function: selectedFunctionName }}
             autoExpand={false}
@@ -298,42 +317,33 @@ export const SourceCodeViewer: React.FC<SourceCodeViewerProps> = ({
               ref={isError ? errorLineRef : undefined}
               className={`flex items-stretch transition-colors duration-150 ${
                 isError
-                  ? 'bg-rose-950/40 border-l-[3px] border-l-rose-500'
-                  : 'hover:bg-[#12141c] border-l-[3px] border-l-transparent'
+                  ? 'bg-[#1a0f12] border-l-[3px] border-l-red-900/50'
+                  : 'hover:bg-[#121317] border-l-[3px] border-l-transparent'
               }`}
             >
               {/* Line Number Gutter */}
               <div
-                className={`w-16 shrink-0 text-right pr-4 py-[3px] select-none ${
+                className={`w-16 shrink-0 text-right pr-4 py-1 select-none text-sm ${
                   isError
-                    ? 'text-rose-400 font-bold bg-rose-950/60'
-                    : 'text-slate-600'
+                    ? 'text-red-400 font-bold bg-[#1a0f12]'
+                    : 'text-slate-500'
                 }`}
               >
                 {isError && (
-                  <span className="inline-block mr-1 text-rose-400">✕</span>
+                  <span className="inline-block mr-1 text-red-500">✕</span>
                 )}
                 {sl.line}
               </div>
 
               {/* Source Text */}
               <div
-                className={`flex-1 py-[3px] px-4 whitespace-pre ${
-                  isError ? 'text-rose-100' : 'text-slate-300'
+                className={`flex-1 py-1 px-4 whitespace-pre ${
+                  isError ? 'text-red-200/90' : 'text-slate-300'
                 }`}
                 style={{ tabSize: 4 }}
               >
-                {highlightRust(sl.text)}
+                {highlightRust(sl.text, selectedWord)}
               </div>
-
-              {/* Error PC Badge */}
-              {isError && (
-                <div className="shrink-0 flex items-center pr-4">
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-bold animate-pulse">
-                    ← ERROR
-                  </span>
-                </div>
-              )}
             </div>
           );
         })}

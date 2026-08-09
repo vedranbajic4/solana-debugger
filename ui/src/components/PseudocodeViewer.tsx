@@ -27,17 +27,17 @@ function highlightC(text: string): React.ReactNode[] {
       if (text[idx + 1] === '/') {
         while (end < text.length && text[end] !== '\n') end++;
       } else {
-        while (end < text.length && !(text[end] === '*' && text[end+1] === '/')) end++;
-        if (end < text.length) end += 2;
+        while (end < text.length && !(text[end - 1] === '*' && text[end] === '/')) end++;
+        if (end < text.length) end++;
       }
       tokens.push({ type: 'comment', value: text.slice(idx, end) });
       idx = end;
       continue;
     }
 
-    if (/[0-9]/.test(text[idx]) && (idx === 0 || /[\s(,=+\-*/<>!&|^~\[]/.test(text[idx - 1]))) {
+    if (/[0-9]/.test(text[idx]) && (idx === 0 || /[\s(,=+\-*/<>!&|^~]/.test(text[idx - 1]))) {
       let end = idx;
-      while (end < text.length && /[0-9a-fA-FxX_.]/.test(text[end])) end++;
+      while (end < text.length && /[0-9a-fA-FxX]/.test(text[end])) end++;
       tokens.push({ type: 'number', value: text.slice(idx, end) });
       idx = end;
       continue;
@@ -48,29 +48,19 @@ function highlightC(text: string): React.ReactNode[] {
       while (end < text.length && /[a-zA-Z0-9_]/.test(text[end])) end++;
       const word = text.slice(idx, end);
 
-      const kwSet = new Set([
-        'if', 'else', 'return', 'while', 'for', 'do', 'break', 'continue', 'switch', 'case', 'default', 'goto', 'sizeof'
-      ]);
-      const typeSet = new Set([
-        'void', 'int', 'char', 'long', 'short', 'unsigned', 'float', 'double', 'bool',
-        'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'int8_t', 'int16_t', 'int32_t', 'int64_t',
-        'Pubkey', 'AccountInfo', 'AccountMeta', 'SolInstruction', 'AccountContext', 'struct', 'typedef', 'union', 'enum'
-      ]);
-
+      const kwSet = new Set(['if', 'else', 'while', 'for', 'return', 'break', 'continue', 'switch', 'case', 'default', 'struct', 'typedef', 'enum']);
+      const typeSet = new Set(['uint64_t', 'int64_t', 'uint32_t', 'int32_t', 'uint16_t', 'int16_t', 'uint8_t', 'int8_t', 'bool', 'void', 'size_t', 'AccountContext', 'SolParameters']);
+      
       if (kwSet.has(word)) {
         tokens.push({ type: 'keyword', value: word });
       } else if (typeSet.has(word)) {
         tokens.push({ type: 'type', value: word });
+      } else if (end < text.length && text[end] === '(') {
+        tokens.push({ type: 'function', value: word });
       } else {
-        // Look ahead to see if it's a function call
-        let isCall = false;
-        let peek = end;
-        while (peek < text.length && /\s/.test(text[peek])) peek++;
-        if (peek < text.length && text[peek] === '(') {
-          isCall = true;
-        }
-        tokens.push({ type: isCall ? 'function' : 'ident', value: word });
+        tokens.push({ type: 'ident', value: word });
       }
+      
       idx = end;
       continue;
     }
@@ -189,31 +179,114 @@ export const PseudocodeViewer: React.FC<PseudocodeViewerProps> = ({ programId, f
             <div className="text-[11px] font-mono text-slate-300 overflow-x-auto overflow-y-auto max-h-[500px] bg-[#050608] rounded border border-[#1c1f2b] custom-scrollbar">
               {(() => {
                 const lines = pseudocode.split('\n');
-                let inHighlightBlock = false;
                 
-                const targetFunc = failureContext?.function;
-                const targetAddr = failureContext?.elfAddress ? `0x${failureContext.elfAddress.toString(16)}` : null;
+                let bestLineIdx = -1;
+                let minDistance = Infinity;
+                let isExactMatch = false;
+                let inTargetFunction = false;
+                let functionStartIdx = -1;
+                let functionEndIdx = -1;
 
-                return lines.map((line, idx) => {
-                  if (line.startsWith('/* Function: ')) {
-                    if ((targetFunc && line.includes(` ${targetFunc} `)) || 
-                        (targetAddr && line.includes(`@ ${targetAddr} `))) {
-                      inHighlightBlock = true;
-                    } else {
-                      inHighlightBlock = false;
+                const targetFunc = failureContext?.function;
+                const targetAddrNum = failureContext?.elfAddress;
+                const targetAddrStr = targetAddrNum ? `0x${targetAddrNum.toString(16)}` : null;
+
+                if (targetAddrNum || targetFunc) {
+                  for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.startsWith('/* Function: ')) {
+                      if ((targetFunc && line.includes(` ${targetFunc} `)) || 
+                          (targetAddrStr && line.includes(`@ ${targetAddrStr} `))) {
+                        inTargetFunction = true;
+                        functionStartIdx = i;
+                      } else {
+                        if (inTargetFunction) functionEndIdx = i;
+                        inTargetFunction = false;
+                      }
+                    }
+                    
+                    if (inTargetFunction && targetAddrNum) {
+                      const match = line.match(/\/\/ @ 0x([0-9a-f]+)(?:-0x([0-9a-f]+))?/i);
+                      if (match) {
+                        const startAddr = parseInt(match[1], 16);
+                        const endAddr = match[2] ? parseInt(match[2], 16) : startAddr;
+                        
+                        if (targetAddrNum >= startAddr && targetAddrNum <= endAddr) {
+                          if (!isExactMatch) {
+                            bestLineIdx = i;
+                            minDistance = 0;
+                            isExactMatch = true;
+                          }
+                        } else {
+                          const dist = Math.min(Math.abs(targetAddrNum - startAddr), Math.abs(targetAddrNum - endAddr));
+                          if (dist < minDistance && !isExactMatch) {
+                            minDistance = dist;
+                            bestLineIdx = i;
+                          }
+                        }
+                      }
                     }
                   }
+                  if (inTargetFunction && functionEndIdx === -1) {
+                     functionEndIdx = lines.length;
+                  }
+                }
 
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`px-3 py-0.5 whitespace-pre ${
-                        inHighlightBlock ? 'bg-rose-900/30 text-rose-200 border-l-2 border-rose-500' : 'hover:bg-white/5 border-l-2 border-transparent'
-                      }`}
-                    >
-                      {highlightC(line)}
-                    </div>
-                  );
+                let renderStartIndex = 0;
+                let renderEndIndex = lines.length;
+
+                if (bestLineIdx === -1 && functionStartIdx !== -1) {
+                  bestLineIdx = functionStartIdx;
+                  isExactMatch = false;
+                }
+
+                if (bestLineIdx !== -1) {
+                  renderStartIndex = Math.max(functionStartIdx !== -1 ? functionStartIdx : 0, bestLineIdx - 10);
+                  renderEndIndex = Math.min(functionEndIdx !== -1 ? functionEndIdx : lines.length, bestLineIdx + 11);
+                } else if (functionStartIdx !== -1) {
+                  renderStartIndex = functionStartIdx;
+                  renderEndIndex = functionEndIdx !== -1 ? functionEndIdx : lines.length;
+                }
+                
+                const linesToRender = lines.slice(renderStartIndex, renderEndIndex);
+                
+                return linesToRender.map((line, relativeIdx) => {
+                  const absoluteIdx = renderStartIndex + relativeIdx;
+                  const displayLine = line.replace(/\/\/ @ 0x[0-9a-f]+(?:-0x[0-9a-f]+)?/i, '').trimEnd();
+                  
+                  if (bestLineIdx !== -1) {
+                    const isBest = absoluteIdx === bestLineIdx;
+                    return (
+                      <div key={absoluteIdx}>
+                        <div 
+                          id={isBest ? "pseudocode-error-line" : undefined}
+                          className={`px-3 py-1 whitespace-pre ${
+                            isBest ? 'bg-rose-950/60 text-rose-100 border-l-[3px] border-l-rose-500 font-bold' : 'hover:bg-white/5 border-l-[3px] border-l-transparent'
+                          }`}
+                          ref={isBest ? (el => { if (el && autoExpand) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }) : undefined}
+                        >
+                          {highlightC(displayLine)}
+                          {isBest && (
+                            <span className="ml-8 font-bold text-[10px] text-rose-300 uppercase tracking-widest bg-rose-500/30 px-2 py-0.5 rounded border border-rose-500/50">
+                              ❌ {isExactMatch ? 'ERROR LOCATION' : 'APPROXIMATE LOCATION'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    const inHighlightBlock = absoluteIdx >= functionStartIdx && absoluteIdx < functionEndIdx;
+                    return (
+                      <div 
+                        key={absoluteIdx} 
+                        className={`px-3 py-0.5 whitespace-pre ${
+                          inHighlightBlock ? 'bg-rose-900/30 text-rose-200 border-l-2 border-rose-500' : 'hover:bg-white/5 border-l-2 border-transparent'
+                        }`}
+                      >
+                        {highlightC(displayLine)}
+                      </div>
+                    );
+                  }
                 });
               })()}
             </div>
