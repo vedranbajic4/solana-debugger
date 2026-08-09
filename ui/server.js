@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { analyzePseudocode } from './semanticAnalyzer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -168,6 +169,24 @@ app.get('/api/pseudocode/:programId', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Program ID is required' });
   }
 
+  const NATIVE_PROGRAMS = {
+    'ComputeBudget111111111111111111111111111111': 'Compute Budget',
+    '11111111111111111111111111111111': 'System Program',
+    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'SPL Token',
+    'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL': 'SPL Associated Token',
+    'Config1111111111111111111111111111111111111': 'Config Program',
+    'Stake11111111111111111111111111111111111111': 'Stake Program',
+    'Vote111111111111111111111111111111111111111': 'Vote Program',
+    'BPFLoaderUpgradeab1e11111111111111111111111': 'BPF Upgradeable Loader'
+  };
+
+  if (NATIVE_PROGRAMS[programId]) {
+    return res.json({ 
+      success: true, 
+      pseudocode: `/*\n * Native Solana Program: ${NATIVE_PROGRAMS[programId]}\n * \n * This is a built-in runtime program written in Rust.\n * It does not execute via the BPF VM, so there is no bytecode to decompile.\n * The failure occurred internally within the Solana validator's native execution.\n */\n` 
+    });
+  }
+
   const soPath = path.join(rootDir, `${programId}.so`);
   const outPath = path.join(rootDir, `${programId}_out.c`);
   const scriptPath = path.join(rootDir, 'scripts', 'decompile_so.sh');
@@ -188,12 +207,33 @@ app.get('/api/pseudocode/:programId', async (req, res) => {
 
     try {
       const cCode = await fs.readFile(outPath, 'utf-8');
-      res.json({ success: true, pseudocode: cCode });
+      const semantic = analyzePseudocode(cCode);
+      res.json({ success: true, semantic });
     } catch (readError) {
       console.error(`❌ Error reading Ghidra output: ${readError.message}`);
       res.status(500).json({ success: false, error: 'Decompilation completed but output file could not be read.' });
     }
   });
+});
+
+app.get('/api/pseudocode/:programId/function/:address', async (req, res) => {
+  const { programId, address } = req.params;
+  const outPath = path.join(rootDir, `${programId}_out.c`);
+  try {
+    const cCode = await fs.readFile(outPath, 'utf-8');
+    const semantic = analyzePseudocode(cCode);
+    const func = semantic.functions.find(f => f.address === address);
+    
+    if (!func) {
+      return res.status(404).json({ success: false, error: 'Function not found' });
+    }
+    
+    const lines = cCode.split('\n');
+    const funcCode = lines.slice(func.startLine, func.endLine + 1).join('\n');
+    res.json({ success: true, pseudocode: funcCode });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
