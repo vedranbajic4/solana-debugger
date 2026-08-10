@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["programs/*"]
+
+[workspace.dependencies]
+solana-program = "4.0"
+
+# Debug-info recipe. Both keys are required:
+#   debug = 2      -> tell rustc to emit DWARF
+#   strip = "none" -> stop cargo injecting `-C strip=debuginfo` at link time,
+#                     which would delete the DWARF that debug=2 just produced.
+#
+# lto/codegen-units are deliberately left at the non-LTO defaults: measured
+# against a fat-LTO build, that yields ~17% more .debug_line rows and ~19% more
+# variables with live locations, with no stack-frame errors.
+#
+# Do NOT set opt-level = 0 here. It overflows the sBPF 4 KB stack frame limit.
+[profile.release]
+overflow-checks = true
+opt-level = 1
+lto = false
+codegen-units = 16
+debug = 2
+strip = "none"

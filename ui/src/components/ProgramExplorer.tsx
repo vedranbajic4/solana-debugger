@@ -5,6 +5,26 @@ import {
   Settings, Key, Package, Cpu, Search
 } from 'lucide-react';
 import type { ProgramSemantic, SemanticFunction } from '../utils/semanticAnalyzer';
+import { SkeletonBar, SkeletonCodeLines } from './Skeleton';
+
+// Placeholder function tree shown while Ghidra decompiles the program.
+const FunctionListSkeleton: React.FC = () => (
+  <div className="space-y-4 p-1" aria-hidden="true">
+    {Array.from({ length: 3 }, (_, group) => (
+      <div key={group} className="space-y-2">
+        <div className="flex items-center space-x-2 p-2">
+          <SkeletonBar className="w-3.5 flex-shrink-0" />
+          <SkeletonBar className="w-32" />
+        </div>
+        <div className="pl-7 space-y-2">
+          {Array.from({ length: 3 }, (_, row) => (
+            <SkeletonBar key={row} className={row % 2 === 0 ? 'w-3/4' : 'w-2/3'} />
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 interface ProgramExplorerProps {
   programId: string;
@@ -360,7 +380,8 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-             {categories.map(cat => (
+             {isLoading && <FunctionListSkeleton />}
+             {!isLoading && categories.map(cat => (
                 <div key={cat.name}>
                    <div 
                      onClick={() => toggleCategory(cat.name)} 
@@ -399,7 +420,7 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                    )}
                 </div>
              ))}
-             {categories.length === 0 && semantic && (
+             {!isLoading && categories.length === 0 && semantic && (
                <div className="text-center text-slate-500 text-xs py-8">
                  No functions found matching "{searchQuery}"
                </div>
@@ -409,7 +430,19 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
 
         {/* Right Pane: Code Viewer */}
         <div className="w-2/3 flex flex-col bg-[#0a0c10] relative">
-           {!selectedFunc ? (
+           {isLoading ? (
+              <div className="flex-1 flex flex-col" role="status" aria-live="polite" aria-busy="true">
+                 <div className="h-14 border-b border-[#1c1f2b] flex items-center px-4 shrink-0 bg-[#050608] space-x-2 text-xs text-slate-500">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Decompiling program bytecode into human-readable pseudocode...</span>
+                 </div>
+                 <div className="flex-1 overflow-hidden p-4">
+                    <div className="bg-[#050608] rounded-xl border border-[#1c1f2b] py-2">
+                       <SkeletonCodeLines lines={16} />
+                    </div>
+                 </div>
+              </div>
+           ) : !selectedFunc ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-500 space-y-4">
                  <Code className="w-12 h-12 opacity-30" />
                  <p className="text-sm">Select a function from the sidebar to view its code</p>
@@ -473,7 +506,13 @@ export const ProgramExplorer: React.FC<ProgramExplorerProps> = ({
                        <span>Raw Pseudocode</span>
                        {isLoadingFunc && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500 ml-2" />}
                      </h3>
-                     {renderRawLines(getFunctionLines(selectedFunc), targetAddrNum, selectedFuncHasError)}
+                     {isLoadingFunc && getFunctionLines(selectedFunc).length === 0 ? (
+                       <div className="bg-[#050608] rounded-xl border border-[#1c1f2b] py-2">
+                         <SkeletonCodeLines lines={14} />
+                       </div>
+                     ) : (
+                       renderRawLines(getFunctionLines(selectedFunc), targetAddrNum, selectedFuncHasError)
+                     )}
                    </div>
                 </div>
               </>

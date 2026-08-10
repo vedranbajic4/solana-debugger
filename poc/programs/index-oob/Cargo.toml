@@ -1,0 +1,18 @@
+[package]
+name = "poc-index-oob"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "poc_index_oob"
+
+[features]
+default = []
+no-entrypoint = []
+
+[dependencies]
+solana-program = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_os, values("solana"))'] }
